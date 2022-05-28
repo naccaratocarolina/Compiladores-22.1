@@ -8,7 +8,7 @@ DIGITO [0-9]
 
 LETRA [A-Za-z]
 
-ID [\$_{LETRA}]?({LETRA}|{DIGITO})*
+ID [\$_{LETRA}]*?({LETRA}|{DIGITO})*
 
 INT {DIGITO}+
 
@@ -18,11 +18,21 @@ FOR [Ff][Oo][Rr]
 
 IF [Ii][Ff]
 
-UMA_LINHA "//"[^"/*"^\n]*
+UMA_LINHA \/\/[^\n]*
 
-MULTI_LINHA "/*"([^*]|\*+[^*/])*"*/"
+MULTI_LINHA \*\/.*|\/\*([^*]|\*+[^*/])*\*\/
 
 COMENTARIO {UMA_LINHA}|{MULTI_LINHA}
+
+ASPAS_SIMPLES \'([^'\\\n]|(\'\')*|\\(.|\n))*\'
+
+ASPAS_DUPLAS \"([^"\\\n]|(\"\")*|\\(.|\n))*\"
+
+ASPAS_INVERTIDAS \`([^`\\]|(\`\`)*|\\(.|\n))*\`
+
+STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}
+
+STRING2 {ASPAS_INVERTIDAS}
 
 %%
     /* Padrões e ações para instalar o lexema - que possui comprimento igual a yyleng 
@@ -45,6 +55,10 @@ COMENTARIO {UMA_LINHA}|{MULTI_LINHA}
 "=="         { return _IG; }
 
 "!="         { return _DIF; }
+
+{STRING}     { return _STRING; }
+
+{STRING2}    { return _STRING2; }
 
 {COMENTARIO} { return _COMENTARIO; }
 
