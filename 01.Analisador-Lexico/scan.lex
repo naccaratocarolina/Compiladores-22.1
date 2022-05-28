@@ -8,7 +8,7 @@ DIGITO [0-9]
 
 LETRA [A-Za-z]
 
-ID [\$_{LETRA}]*?({LETRA}|{DIGITO})*
+ID [\$_{LETRA}]*({LETRA}|{DIGITO})*
 
 INT {DIGITO}+
 
