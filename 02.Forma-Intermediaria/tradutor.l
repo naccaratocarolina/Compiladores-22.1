@@ -22,7 +22,7 @@
     { tk_funcao, "funcao" },
     { tk_print, "comando print" }
   };
-  
+
   // Declaracao das funcoes
   void A();
   void B();
@@ -46,7 +46,7 @@ DELIM [ \t\n]
 
 WS  {DELIM}+
 
-NL (\r|\n|\r\n|;) 
+NL (\r|\n|\r\n|;)
 
 DIGITO [0-9]
 
@@ -62,10 +62,8 @@ ASPAS_DUPLAS \"([^"\\\n]|(\"\")*|\\(.|\n))*\"
 
 STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}
 
-FUNCAO [^() ]+\(
-
 %%
-    /* Padrões e ações para instalar o lexema - que possui comprimento igual a yyleng 
+    /* Padrões e ações para instalar o lexema - que possui comprimento igual a yyleng
        e primeiro caractere apontado por yytext - na tabela de simbolos. */
 
 {WS}      { num_colunas += yyleng; }
@@ -81,9 +79,6 @@ FUNCAO [^() ]+\(
 
 {STRING}  { num_colunas += yyleng;
             return tk_string; }
-
-{FUNCAO}  { num_colunas += yyleng;
-            return tk_funcao; }
 
 {ID}      { num_colunas += yyleng;
             return tk_id; }
@@ -104,7 +99,7 @@ string nome_token (int token) {
     return nome_tokens[token];
   else {
     string r;
-    
+
     r = token;
     return r;
   }
@@ -128,35 +123,34 @@ void casa (int esperado) {
 }
 
 void CMDs () {
-  while (token != 0) {
-    switch (token) {
-      case tk_id:
-        A();
-        break;
-      case tk_print:
-        B();
-        break;
-      default:
-        F();
-        break;
-    }
+  switch (token) {
+    case tk_id:
+      A();
+      CMDs();
+      break;
+    case tk_print:
+      B();
+      CMDs();
+      break;
   }
 }
 
 void A() {
 // Guardamos o lexema pois a função 'casa' altera o seu valor.
-  string temp = lexema; 
+  string temp = lexema;
   casa( tk_id );
   print( temp );
   casa( '=' );
   E();
   print( "=" );
+  casa(';');
 }
 
 void B() {
   casa(tk_print);
   E();
   cout << "print #";
+  casa(';');
 }
 
 void E() {
@@ -187,17 +181,36 @@ void F() {
   switch (token) {
     case tk_id: {
       string temp = lexema;
-      casa( tk_id ); print( temp + " @" ); }
+      casa( tk_id );
+      // Funcoes
+      if (token == '(') {
+        casa('(');
+        E();
+        // Parametros
+        while (token == ',') {
+          casa(',');
+          E();
+        }
+        casa(')');
+        print( temp + " #" );
+      }
+      // Identificadores
+      else {
+        print( temp + " @" );
+      }
+    }
       break;
     case tk_num: {
       string temp = lexema;
-      casa( tk_num ); print( temp ); }
+      casa( tk_num ); print( temp );
+    }
       break;
     case tk_string: {
       string temp = lexema;
-      casa( tk_string ); print( temp ); }
+      casa( tk_string ); print( temp );
+    }
       break;
-    case '(': 
+    case '(':
       casa( '(' ); E(); casa( ')' ); break;
     default:
       erro( "Caractere ilegal: " + lexema );
@@ -206,7 +219,7 @@ void F() {
 
 int main() {
   token = next_token();
-  
+
   CMDs();
 
   return 0;
