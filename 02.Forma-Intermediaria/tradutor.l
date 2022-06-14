@@ -50,7 +50,7 @@ NL (\r|\n|\r\n|;)
 
 DIGITO [0-9]
 
-LETRA [A-Za-z]
+LETRA [A-Za-z_]
 
 ID {LETRA}({LETRA}|{DIGITO})*
 
@@ -148,7 +148,7 @@ void A() {
 void B() {
   casa(tk_print);
   E();
-  cout << "print #";
+  cout << "print # ";
 }
 
 void E() {
@@ -200,7 +200,13 @@ void F() {
       break;
     case tk_num: {
       string temp = lexema;
-      casa( tk_num ); print( temp );
+      casa( tk_num );
+      print( temp );
+      
+      if (token == '!') {
+        casa('!');
+        print( "fat #" );
+      }
     }
       break;
     case tk_string: {
