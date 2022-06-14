@@ -143,14 +143,12 @@ void A() {
   casa( '=' );
   E();
   print( "=" );
-  casa(';');
 }
 
 void B() {
   casa(tk_print);
   E();
   cout << "print #";
-  casa(';');
 }
 
 void E() {
