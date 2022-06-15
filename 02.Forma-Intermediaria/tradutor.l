@@ -29,6 +29,8 @@
   void C();
   void E();
   void E_linha();
+  void H();
+  void I();
   void T();
   void T_linha();
   void F();
@@ -145,15 +147,73 @@ void A() {
   print( "=" );
 }
 
-void B() {
+void B () {
   casa(tk_print);
   E();
-  cout << "print # ";
+  print( "print #" );
+}
+
+void C () { // Fatorial
+  if (token == '!') {
+    casa( '!' );
+    print( "fat #" );
+    C();
+  }
+}
+
+void D () { // XOR
+  if (token == '^') {
+    casa( '^' );
+    E();
+    D();
+    print( "^" );
+  }
 }
 
 void E() {
   T();
   E_linha();
+}
+
+void G (string lexema) { // Id
+  // Funcao ou expressao ou fatorial
+  if (token == '(') {
+    casa('(');
+    E();
+    // Parametros
+    while (token == ',') {
+      casa(',');
+      E();
+    }
+    C(); // Fatorial
+    D(); // XOR
+    casa(')');
+    print( lexema + " #" );
+  }
+  // Identificadores
+  else {
+    print( lexema + " @" );
+  }
+  D(); // XOR
+  C(); // Fatorial
+}
+
+void H () { // Op menos
+  I(); // Op mais
+  if (token == '-') {
+    print( "0" );
+    casa( '-' );
+    I(); // Op mais
+    E();
+    D(); // XOR
+    print( "-" );
+  }
+}
+
+void I () { // Op mais
+  if (token == '+') {
+    casa( '+' );
+  }
 }
 
 void E_linha() {
@@ -177,36 +237,21 @@ void T_linha() {
 
 void F() {
   switch (token) {
+    case '-':
+      H(); // Op menos
+      break;
     case tk_id: {
       string temp = lexema;
       casa( tk_id );
-      // Funcoes
-      if (token == '(') {
-        casa('(');
-        E();
-        // Parametros
-        while (token == ',') {
-          casa(',');
-          E();
-        }
-        casa(')');
-        print( temp + " #" );
-      }
-      // Identificadores
-      else {
-        print( temp + " @" );
-      }
+      G(temp); // Id
     }
       break;
     case tk_num: {
       string temp = lexema;
       casa( tk_num );
       print( temp );
-      
-      if (token == '!') {
-        casa('!');
-        print( "fat #" );
-      }
+      C(); // Fatorial
+      D(); // XOR
     }
       break;
     case tk_string: {
@@ -215,7 +260,11 @@ void F() {
     }
       break;
     case '(':
-      casa( '(' ); E(); casa( ')' ); break;
+      casa( '(' ); 
+      E(); 
+      casa( ')' );
+      C(); // Fatorial
+      break;
     default:
       erro( "Caractere ilegal: " + lexema );
   }
