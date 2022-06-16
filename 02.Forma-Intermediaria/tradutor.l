@@ -12,14 +12,13 @@
   int num_linhas = 1;
   int num_colunas = 1;
 
-  enum { tk_int = 256, tk_num, tk_string, tk_id, tk_funcao, tk_print };
+  enum { tk_int = 256, tk_num, tk_string, tk_id, tk_print };
 
   map<int,string> nome_tokens = {
     { tk_int, "int" },
     { tk_num, "float" },
     { tk_string, "string" },
     { tk_id, "nome de identificador" },
-    { tk_funcao, "funcao" },
     { tk_print, "comando print" }
   };
 
@@ -30,6 +29,7 @@
   void E();
   void E_linha();
   void H();
+  void G();
   void I();
   void T();
   void T_linha();
@@ -137,8 +137,7 @@ void CMDs () {
   }
 }
 
-void A() {
-// Guardamos o lexema pois a função 'casa' altera o seu valor.
+void A() { // Id
   string temp = lexema;
   casa( tk_id );
   print( temp );
@@ -147,7 +146,7 @@ void A() {
   print( "=" );
 }
 
-void B () {
+void B () { // Print
   casa(tk_print);
   E();
   print( "print #" );
@@ -168,23 +167,6 @@ void D () { // XOR
     C(); // Fatorial
     D(); // XOR
     print( "^" );
-  }
-}
-
-void H () { // Operadores + e -
-  if (token == '-') {
-    print( "0" );
-    casa( '-' );
-    H(); // Operadores + e -
-    print( "-" );
-  }
-  else if (token == '+') {
-    casa( '+' );
-    H(); // Operadores + e - 
-  }
-  else {
-    F();
-    D(); // XOR
   }
 }
 
@@ -209,6 +191,23 @@ void G (string lexema) { // Id
   }
   D(); // XOR
   C(); // Fatorial
+}
+
+void H () { // Operadores + e -
+  if (token == '-') {
+    print( "0" );
+    casa( '-' );
+    H(); // Operadores + e -
+    print( "-" );
+  }
+  else if (token == '+') {
+    casa( '+' );
+    H(); // Operadores + e - 
+  }
+  else {
+    F();
+    D(); // XOR
+  }
 }
 
 void E() {
