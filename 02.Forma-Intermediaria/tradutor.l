@@ -164,15 +164,28 @@ void C () { // Fatorial
 void D () { // XOR
   if (token == '^') {
     casa( '^' );
-    E();
-    D();
+    F();
+    C(); // Fatorial
+    D(); // XOR
     print( "^" );
   }
 }
 
-void E() {
-  T();
-  E_linha();
+void H () { // Operadores + e -
+  if (token == '-') {
+    print( "0" );
+    casa( '-' );
+    H(); // Operadores + e -
+    print( "-" );
+  }
+  else if (token == '-') {
+    casa( '+' );
+    H(); // Operadores + e - 
+  }
+  else {
+    F();
+    D(); // XOR
+  }
 }
 
 void G (string lexema) { // Id
@@ -198,48 +211,52 @@ void G (string lexema) { // Id
   C(); // Fatorial
 }
 
-void H () { // Op menos
-  I(); // Op mais
-  if (token == '-') {
-    print( "0" );
-    casa( '-' );
-    I(); // Op mais
-    E();
-    D(); // XOR
-    print( "-" );
-  }
-}
-
-void I () { // Op mais
-  if (token == '+') {
-    casa( '+' );
-  }
+void E() {
+  T();
+  E_linha();
 }
 
 void E_linha() {
   switch( token ) {
-    case '+' : casa( '+' ); T(); print( "+"); E_linha(); break;
-    case '-' : casa( '-' ); T(); print( "-"); E_linha(); break;
+    case '+' : 
+      casa( '+' ); 
+      T(); 
+      print( "+"); 
+      E_linha(); 
+      break;
+    case '-' : 
+      casa( '-' ); 
+      T(); 
+      print( "-"); 
+      E_linha(); 
+      break;
   }
 }
 
 void T() {
-  F();
+  H(); // Operadores + e - 
   T_linha();
 }
 
 void T_linha() {
   switch( token ) {
-    case '*' : casa( '*' ); F(); print( "*"); T_linha(); break;
-    case '/' : casa( '/' ); F(); print( "/"); T_linha(); break;
+    case '*' : 
+      casa( '*' ); 
+      H(); // Operadores + e - 
+      print( "*" ); 
+      T_linha(); 
+      break;
+    case '/' : 
+      casa( '/' ); 
+      H(); // Operadores + e - 
+      print( "/" ); 
+      T_linha(); 
+      break;
   }
 }
 
 void F() {
   switch (token) {
-    case '-':
-      H(); // Op menos
-      break;
     case tk_id: {
       string temp = lexema;
       casa( tk_id );
@@ -261,7 +278,9 @@ void F() {
       break;
     case '(':
       casa( '(' ); 
-      E(); 
+      H(); // Operadores + e - 
+      T_linha();
+      E_linha();
       casa( ')' );
       C(); // Fatorial
       break;
