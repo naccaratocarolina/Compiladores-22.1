@@ -178,7 +178,7 @@ void H () { // Operadores + e -
     H(); // Operadores + e -
     print( "-" );
   }
-  else if (token == '-') {
+  else if (token == '+') {
     casa( '+' );
     H(); // Operadores + e - 
   }
