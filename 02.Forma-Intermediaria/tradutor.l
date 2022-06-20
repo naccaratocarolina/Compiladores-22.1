@@ -160,12 +160,12 @@ void C () { // Fatorial
   }
 }
 
-void D () { // XOR
+void D () { // EXP
   if (token == '^') {
     casa( '^' );
     F();
     C(); // Fatorial
-    D(); // XOR
+    D(); // EXP
     print( "^" );
   }
 }
@@ -181,7 +181,7 @@ void G (string lexema) { // Id
       E();
     }
     C(); // Fatorial
-    D(); // XOR
+    D(); // EXP
     casa(')');
     print( lexema + " #" );
   }
@@ -189,7 +189,7 @@ void G (string lexema) { // Id
   else {
     print( lexema + " @" );
   }
-  D(); // XOR
+  D(); // EXP
   C(); // Fatorial
 }
 
@@ -206,7 +206,7 @@ void H () { // Operadores + e -
   }
   else {
     F();
-    D(); // XOR
+    D(); // EXP
   }
 }
 
@@ -267,7 +267,7 @@ void F() {
       casa( tk_num );
       print( temp );
       C(); // Fatorial
-      D(); // XOR
+      D(); // EXP
     }
       break;
     case tk_string: {
