@@ -38,49 +38,44 @@ STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}|{ASPAS_INVERTIDAS}
 %%
 
 {WS}           { incrementa(); }
-
 {NL}           { incrementa(); }
 
-"."		       { incrementa(); return tk_pt; }
-
 "var"		   { incrementa(); yylval.val = "&"; return tk_var; }
-
 "let"	       { incrementa(); yylval.val = "&"; return tk_let; }
-
 "const"		   { incrementa(); yylval.val = "&"; return tk_const; }
-
 "function"	   { incrementa(); return tk_func; }
-
 "for"		   { incrementa(); return tk_for; }
-
 "while"		   { incrementa(); return tk_while; }
-
 "if"		   { incrementa(); return tk_if; }
-
 "else"		   { incrementa(); return tk_else; }
-
 "return"	   { incrementa(); return tk_return; }
 
-"=="	       { incrementa(); return tk_eq; }
+"."		       { incrementa(); return tk_pt; }
+";"	       	   { incrementa(); return tk_pt_vir; }
+","	       	   { incrementa(); return tk_vir; }
+"("			   { incrementa(); return tk_abre_paren; }
+")"			   { incrementa(); return tk_fecha_paren; }
+"{"			   { incrementa(); return tk_abre_chave; }
+"}"			   { incrementa(); return tk_fecha_chave; }
+"["			   { incrementa(); return tk_abre_colch; }
+"]"			   { incrementa(); return tk_fecha_colch; }
 
-"!="	       { incrementa(); return tk_not_eq; }
+"+"            { incrementa(); return tk_add; }
+"-"            { incrementa(); return tk_sub; }
+"*"            { incrementa(); return tk_mul; }
+"/"            { incrementa(); return tk_div; }
+"%"            { incrementa(); return tk_mod; }
+"="            { incrementa(); return tk_atribui; }
+"=="	       { incrementa(); return tk_ig; }
+"!="	       { incrementa(); return tk_dif; }
 
-"+="	       { incrementa(); return tk_add_assign; }
-
-"++"	       { incrementa(); return tk_increase; }
-
-";"	       	   { incrementa(); return tk_semicolon; }
-
-","	       	   { incrementa(); return tk_comma; }
+"+="	       { incrementa(); return tk_add_atribui; }
+"++"	       { incrementa(); return tk_incrementa; }
 
 {ID}           { incrementa(); yylval.val = yytext; return tk_id; }
-
 {INT}          { incrementa(); yylval.val = yytext; return tk_int; }
-
 {FLOAT}        { incrementa(); yylval.val = yytext; return tk_float; }
-
 {STRING}       { incrementa(); yylval.val = yytext; return tk_string; }
-
 .              { incrementa(); }
 
 %%

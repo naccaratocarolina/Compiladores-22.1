@@ -1,4 +1,4 @@
-all: saida entrada.txt lex.yy.c
+all: saida entrada.txt lex.yy.c clean
 	./saida < entrada.txt
 
 lex.yy.c: mini_js.l

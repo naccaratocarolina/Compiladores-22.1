@@ -20,6 +20,10 @@ int yylex (void);
 int yyparse (void);
 void yyerror (const char *);
 
+vector<string> operator+ (vector<string>, vector<string>);
+vector<string> operator+ (vector<string>, string);
+vector<string> operator+ (string, vector<string>);
+
 vector<string> concatena(vector<string>, vector<string>);
 string gera_label (string);
 vector<string> resolve_enderecos (vector<string>);
@@ -27,9 +31,15 @@ void imprime (vector<string>);
 
 %}
 
+%type <val> valores_literais obj_literal array_literal especificador_tipo
+
 // Tokens
-%token tk_pt tk_var tk_let tk_const tk_func tk_for tk_while tk_if tk_else tk_return tk_eq
-%token tk_not_eq tk_add_assign tk_increase tk_id tk_int tk_float tk_string tk_semicolon tk_comma
+%token tk_var tk_let tk_const tk_func tk_for tk_while tk_if tk_else tk_return 
+%token tk_id tk_int tk_float tk_string 
+
+// Operadores
+%token tk_pt tk_pt_vir tk_vir tk_abre_paren tk_fecha_paren tk_abre_chave tk_fecha_chave tk_abre_colch tk_fecha_colch
+%token tk_add tk_sub tk_mul tk_div tk_mod tk_atribui tk_ig tk_dif tk_add_atribui tk_incrementa
 
 // Start indica o símbolo inicial da gramática
 %start S
@@ -41,29 +51,48 @@ S
   ;
 
 CMDS
-  : CMD
-  | CMD CMDS { $$.v = $1.v + $2.v; }
+  : CMD { $$.v = $1.v; }
+  | CMDs CMD { $$.v = $1.v + $2.v; }
   ;
 
 CMD
-  : EXPRESSAO_CMD
+  : EXPRESSAO_CMD { $$.v = $1.v + "^"; }
   | FOR_CMD
   | WHILE_CMD
   | IF_CMD
+  | DECLARACAO_VAR
   ;
 
 EXPRESSAO_CMD
-  : EXPRESSAO
-  | EXPRESSAO tk_semicolon { $$.v = $1.v; }
-  | tk_semicolon { $$ = NULL; }
+  : EXPRESSAO { $$.v = $1.v; }
+  | EXPRESSAO tk_pt_vir { $$.v = $1.v; }
+  | tk_pt_vir { $$ = NULL; }
   ;
 
 EXPRESSAO
   : EXPRESSAO_ATRIBUICAO
-  | EXPRESSAO tk_comma EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v; }
+  | EXPRESSAO tk_vir EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v; }
   ;
 
 EXPRESSAO_ATRIBUICAO
+  : EXPRESSAO_UNARIA OP_ATRIBUICAO EXPRESSAO_ATRIBUICAO
+  ;
+
+EXPRESSAO_UNARIA
+  : EXPRESSAO_POSFIXA
+  | EXPRESSAO_PRIMARIA tk_incrementa
+  ;
+
+OP_ATRIBUICAO
+  : tk_atribui
+  | tk_add_atribui
+  ;
+
+especificador_tipo
+  : tk_var 
+  | tk_let 
+  | tk_const
+  ;
 
 %%
 
