@@ -9,8 +9,7 @@
 using namespace std;
 
 struct Atributos {
-  string val;
-  vector<string> v;
+  vector<string> v; // Codigo gerado
 };
 
 #define YYSTYPE Atributos
@@ -31,15 +30,18 @@ void imprime (vector<string>);
 
 %}
 
-%type <val> valores_literais obj_literal array_literal especificador_tipo
-
 // Tokens
 %token tk_var tk_let tk_const tk_func tk_for tk_while tk_if tk_else tk_return 
 %token tk_id tk_int tk_float tk_string 
 
 // Operadores
 %token tk_pt tk_pt_vir tk_vir tk_abre_paren tk_fecha_paren tk_abre_chave tk_fecha_chave tk_abre_colch tk_fecha_colch
-%token tk_add tk_sub tk_mul tk_div tk_mod tk_atribui tk_ig tk_dif tk_add_atribui tk_incrementa
+%token tk_add tk_sub tk_mul tk_div tk_mod tk_atribui tk_ig tk_dif tk_add_atribui tk_incrementa tk_menor tk_maior tk_menor_ig tk_maior_ig
+
+%right tk_atribui
+%left tk_menor tk_maior tk_menor_ig tk_maior_ig tk_ig tk_dif
+%left tk_add tk_sub
+%left tk_mul tk_div tk_mod
 
 // Start indica o símbolo inicial da gramática
 %start S
@@ -50,48 +52,47 @@ S
   : CMDS { imprime(resolve_enderecos($1.v)); }
   ;
 
-CMDS
-  : CMD { $$.v = $1.v; }
-  | CMDs CMD { $$.v = $1.v + $2.v; }
+CMDS 
+  : CMD CMDS { $$.v = $1.v + $2.v; }
+  | CMD { $$.v = $1.v; }
   ;
 
 CMD
-  : EXPRESSAO_CMD { $$.v = $1.v + "^"; }
-  | FOR_CMD
-  | WHILE_CMD
-  | IF_CMD
-  | DECLARACAO_VAR
+  : EXPRESSAO tk_pt_vir { $$.v = $1.v + "^"; }
+  | DECLARACAO { $$.v = $1.v; }
   ;
 
-EXPRESSAO_CMD
-  : EXPRESSAO { $$.v = $1.v; }
-  | EXPRESSAO tk_pt_vir { $$.v = $1.v; }
-  | tk_pt_vir { $$ = NULL; }
+DECLARACAO
+  : DECLARACAO_VARIAVEL tk_pt_vir
+  ;
+
+DECLARACAO_VARIAVEL
+  : tk_let tk_id { $$.v = $2.v + "&"; }
+  | tk_let tk_id tk_atribui EXPRESSAO { $$.v = $2.v + "&" + $2.v + $4.v + "=" + "^"; }
   ;
 
 EXPRESSAO
-  : EXPRESSAO_ATRIBUICAO
-  | EXPRESSAO tk_vir EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v; }
+  : EXPRESSAO_RELACIONAL { $$.v = $1.v; }
   ;
 
-EXPRESSAO_ATRIBUICAO
-  : EXPRESSAO_UNARIA OP_ATRIBUICAO EXPRESSAO_ATRIBUICAO
+EXPRESSAO_RELACIONAL
+  : EXPRESSAO_UNARIA { $$ = $1; }
+  | EXPRESSAO_UNARIA tk_menor EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "<"; }
+  | EXPRESSAO_UNARIA tk_maior EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + ">"; }
+  | EXPRESSAO_UNARIA tk_menor_ig EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "<="; }
+  | EXPRESSAO_UNARIA tk_maior_ig EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + ">="; }
+  | EXPRESSAO_UNARIA tk_ig EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "=="; }
+  | EXPRESSAO_UNARIA tk_dif EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "!="; }
   ;
 
 EXPRESSAO_UNARIA
-  : EXPRESSAO_POSFIXA
-  | EXPRESSAO_PRIMARIA tk_incrementa
-  ;
-
-OP_ATRIBUICAO
-  : tk_atribui
-  | tk_add_atribui
-  ;
-
-especificador_tipo
-  : tk_var 
-  | tk_let 
-  | tk_const
+  : EXPRESSAO_UNARIA tk_mul EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "*"; }
+  | EXPRESSAO_UNARIA tk_div EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "/"; }
+  | EXPRESSAO_UNARIA tk_mod EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "%"; }
+  | EXPRESSAO_UNARIA tk_add EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "+"; }
+  | EXPRESSAO_UNARIA tk_sub EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "-"; }
+  | tk_id tk_atribui EXPRESSAO { $$.v = $1.v + $3.v + "="; }
+  | tk_id { $$.v = $1.v + "@"; }
   ;
 
 %%
