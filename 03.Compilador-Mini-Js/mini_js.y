@@ -58,42 +58,49 @@ CMDS
   ;
 
 CMD
-  : EXPRESSAO tk_pt_vir { $$.v = $1.v + "^"; }
-  | DECLARACAO { $$.v = $1.v; }
-  ;
-
-DECLARACAO
-  : DECLARACAO_VARIAVEL tk_pt_vir
-  ;
-
-DECLARACAO_VARIAVEL
-  : tk_let tk_id { $$.v = $2.v + "&"; }
-  | tk_let tk_id tk_atribui EXPRESSAO { $$.v = $2.v + "&" + $2.v + $4.v + "=" + "^"; }
+  : EXPRESSAO PULA_PT_VIR { $$.v = $1.v + "^"; }
   ;
 
 EXPRESSAO
-  : EXPRESSAO_RELACIONAL { $$.v = $1.v; }
+  : EXPRESSAO_IGUALDADE { $$.v = $1.v; }
+  ;
+
+EXPRESSAO_IGUALDADE
+  : EXPRESSAO_RELACIONAL
+  | EXPRESSAO_IGUALDADE tk_ig EXPRESSAO_RELACIONAL { $$.v = $1.v + $3.v + "=="; }
+  | EXPRESSAO_IGUALDADE tk_dif EXPRESSAO_RELACIONAL { $$.v = $1.v + $3.v + "!="; }
   ;
 
 EXPRESSAO_RELACIONAL
-  : EXPRESSAO_UNARIA { $$ = $1; }
-  | EXPRESSAO_UNARIA tk_menor EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "<"; }
-  | EXPRESSAO_UNARIA tk_maior EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + ">"; }
-  | EXPRESSAO_UNARIA tk_menor_ig EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "<="; }
-  | EXPRESSAO_UNARIA tk_maior_ig EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + ">="; }
-  | EXPRESSAO_UNARIA tk_ig EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "=="; }
-  | EXPRESSAO_UNARIA tk_dif EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "!="; }
+  : EXPRESSAO_ADITIVA
+  | EXPRESSAO_RELACIONAL tk_menor EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + "<"; }
+  | EXPRESSAO_RELACIONAL tk_maior EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + ">"; }
+  | EXPRESSAO_RELACIONAL tk_menor_ig EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + "<="; }
+  | EXPRESSAO_RELACIONAL tk_maior_ig EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + ">="; }
   ;
 
-EXPRESSAO_UNARIA
-  : EXPRESSAO_UNARIA tk_mul EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "*"; }
-  | EXPRESSAO_UNARIA tk_div EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "/"; }
-  | EXPRESSAO_UNARIA tk_mod EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "%"; }
-  | EXPRESSAO_UNARIA tk_add EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "+"; }
-  | EXPRESSAO_UNARIA tk_sub EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "-"; }
-  | tk_id tk_atribui EXPRESSAO { $$.v = $1.v + $3.v + "="; }
+EXPRESSAO_ADITIVA
+  : EXPRESSAO_MULTIPLICATIVA 
+  | EXPRESSAO_ADITIVA tk_add EXPRESSAO_MULTIPLICATIVA { $$.v = $1.v + $3.v + "+"; }
+  | EXPRESSAO_ADITIVA tk_sub EXPRESSAO_MULTIPLICATIVA { $$.v = $1.v + $3.v + "-"; }
+  ;
+
+EXPRESSAO_MULTIPLICATIVA
+  : EXPRESSAO_ATRIBUICAO
+  | EXPRESSAO_MULTIPLICATIVA tk_mul EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "*"; }
+  | EXPRESSAO_MULTIPLICATIVA tk_div EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "/"; }
+  | EXPRESSAO_MULTIPLICATIVA tk_mod EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "%"; }
+  ;
+
+EXPRESSAO_ATRIBUICAO
+  : tk_id tk_atribui EXPRESSAO { $$.v = $1.v + $3.v + "="; }
   | tk_id { $$.v = $1.v + "@"; }
   ;
+
+PULA_PT_VIR
+  : /* VAZIO */
+  | tk_pt_vir
+  ;  
 
 %%
 
