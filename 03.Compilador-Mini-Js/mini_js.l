@@ -1,6 +1,9 @@
 %{
 	#include <stdio.h>
 	#include <stdlib.h>
+	#include <string>
+
+	using namespace std;
 
   	// Declaracao das funcoes
   	void incrementa ();
@@ -35,6 +38,8 @@ ASPAS_INVERTIDAS \`([^`\\]|(\`\`)*|\\(.|\n))*\`
 STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}|{ASPAS_INVERTIDAS}
 
 %%
+
+<<EOF>>	       {}
 
 {WS}           { incrementa(); }
 

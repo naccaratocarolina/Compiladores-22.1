@@ -38,13 +38,14 @@ void imprime (vector<string>);
 %token tk_pt tk_pt_vir tk_vir tk_abre_paren tk_fecha_paren tk_abre_chave tk_fecha_chave tk_abre_colch tk_fecha_colch
 %token tk_add tk_sub tk_mul tk_div tk_mod tk_atribui tk_ig tk_dif tk_add_atribui tk_incrementa tk_menor tk_maior tk_menor_ig tk_maior_ig
 
-%right tk_atribui
-%left tk_menor tk_maior tk_menor_ig tk_maior_ig tk_ig tk_dif
 %left tk_add tk_sub
 %left tk_mul tk_div tk_mod
+%left tk_menor tk_maior tk_menor_ig tk_maior_ig tk_ig tk_dif
+%right tk_atribui
 
 // Start indica o símbolo inicial da gramática
 %start S
+%define parse.error verbose
 
 %%
 
@@ -58,11 +59,17 @@ CMDS
   ;
 
 CMD
-  : EXPRESSAO PULA_PT_VIR { $$.v = $1.v + "^"; }
+  : EXPRESSAO tk_pt_vir { $$.v = $1.v + "^"; }
   ;
 
 EXPRESSAO
-  : EXPRESSAO_IGUALDADE { $$.v = $1.v; }
+  : EXPRESSAO_ATRIBUICAO
+  | EXPRESSAO tk_vir EXPRESSAO_ATRIBUICAO
+  ;
+
+EXPRESSAO_ATRIBUICAO 
+  : EXPRESSAO_IGUALDADE
+  | EXPRESSAO_UNARIA OP_ATRIBUICAO EXPRESSAO_ATRIBUICAO
   ;
 
 EXPRESSAO_IGUALDADE
@@ -86,21 +93,36 @@ EXPRESSAO_ADITIVA
   ;
 
 EXPRESSAO_MULTIPLICATIVA
-  : EXPRESSAO_ATRIBUICAO
-  | EXPRESSAO_MULTIPLICATIVA tk_mul EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "*"; }
-  | EXPRESSAO_MULTIPLICATIVA tk_div EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "/"; }
-  | EXPRESSAO_MULTIPLICATIVA tk_mod EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "%"; }
+  : EXPRESSAO_UNARIA
+  | EXPRESSAO_MULTIPLICATIVA tk_mul EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "*"; }
+  | EXPRESSAO_MULTIPLICATIVA tk_div EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "/"; }
+  | EXPRESSAO_MULTIPLICATIVA tk_mod EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "%"; }
   ;
 
-EXPRESSAO_ATRIBUICAO
-  : tk_id tk_atribui EXPRESSAO { $$.v = $1.v + $3.v + "="; }
-  | tk_id { $$.v = $1.v + "@"; }
+EXPRESSAO_UNARIA
+  : EXPRESSAO_POSFIXA
+  | tk_incrementa EXPRESSAO_UNARIA
   ;
 
-PULA_PT_VIR
-  : /* VAZIO */
-  | tk_pt_vir
-  ;  
+EXPRESSAO_POSFIXA
+  : EXPRESSAO_PRIMARIA
+  | EXPRESSAO_POSFIXA tk_abre_colch EXPRESSAO tk_fecha_colch
+  | EXPRESSAO_POSFIXA tk_abre_paren tk_fecha_paren
+  | EXPRESSAO_POSFIXA tk_pt tk_id
+  | EXPRESSAO_POSFIXA tk_incrementa
+  ;
+
+EXPRESSAO_PRIMARIA
+  : tk_id
+  | tk_float
+  | tk_string
+  | tk_abre_paren EXPRESSAO tk_fecha_paren
+  ;
+
+OP_ATRIBUICAO
+  : tk_atribui
+  | tk_add_atribui
+  ;
 
 %%
 
@@ -159,7 +181,7 @@ void imprime( vector<string> codigo ) {
 
 void yyerror( const char* st ) {
    puts( st ); 
-   printf( "Proximo a: %s\n", yytext );
+   printf( "Proximo token: %saaaa\n", yytext );
    exit( 0 );
 }
 
