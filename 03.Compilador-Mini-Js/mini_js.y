@@ -53,26 +53,44 @@ S
   ;
 
 CMDS 
-  : CMD { $$.v = $1.v; }
+  : CMD
   | CMDS CMD { $$.v = $1.v + $2.v; }
   ;
 
 CMD
+  : ATRIBUICAO_CMD
+  | FOR_CMD
+  | WHILE_CMD
+  | IF_CMD
+  | DECLARACAO_CMD 
+  ;
+
+ATRIBUICAO_CMD
   : ATRIBUICAO TERMINADOR { $$.v = $1.v + "^"; }
-  | IF_CMD { $$.v = $1.v; }
-  | tk_let DECLARACAO_VARIAVEL TERMINADOR { $$.v = $2.v; }
   ;
 
 ATRIBUICAO 
-  : EXPRESSAO { $$ = $1; }
+  : EXPRESSAO
   | LVALUE '=' ATRIBUICAO { $$.v = $1.v + $3.v + "="; }
   | LVALUEPROP '=' ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; }
-  | LVALUEPROP { $$.v = $1.v + "[@]"; }
+  ;
+
+FOR_CMD
+  : tk_for '(' DECLARACAO_CMD ATRIBUICAO ';' ATRIBUICAO ')' ESCOPO
+  | tk_for '(' ATRIBUICAO ';' ATRIBUICAO ';' ATRIBUICAO ')' ESCOPO
+  ;
+
+WHILE_CMD
+  : tk_while '(' ATRIBUICAO ')' ESCOPO
   ;
 
 IF_CMD
   : tk_if '(' EXPRESSAO ')' ESCOPO tk_else ESCOPO
   | tk_if '(' EXPRESSAO ')' ESCOPO
+  ;
+
+DECLARACAO_CMD
+  : tk_let DECLARACAO_VARIAVEL TERMINADOR { $$.v = $2.v; }
   ;
 
 DECLARACAO_VARIAVEL
@@ -98,19 +116,21 @@ EXPRESSAO
   | EXPRESSAO tk_maior_ig EXPRESSAO { $$.v = $1.v + $3.v + ">="; }
   | EXPRESSAO tk_ig EXPRESSAO { $$.v = $1.v + $3.v + "=="; }
   | EXPRESSAO tk_dif EXPRESSAO { $$.v = $1.v + $3.v + "!="; }
+  | EXPRESSAO_PRIMARIA tk_incrementa { $$.v = $1.v + "++"; }
   ;
 
 EXPRESSAO_PRIMARIA
-  : LVALUE { $$.v = $1.v + "@"; }
-  | tk_float { $$.v = $1.v; }
-  | tk_string { $$.v = $1.v; }
+  : tk_float 
+  | tk_string
+  | LVALUE { $$.v = $1.v + "@"; }
+  | LVALUEPROP { $$.v = $1.v + "[@]"; }
   | '(' EXPRESSAO ')' { $$ = $2; }
   | OBJETO_LITERAL { $$.v = vetor + "{}"; }
   | ARRAY_LITERAL { $$.v = vetor + "[]"; }
   ;
 
 LVALUE
-  : tk_id { $$.v = $1.v; }
+  : tk_id
   ;
 
 PROP
