@@ -16,7 +16,7 @@
 
 DELIM [ \t\n]
 
-WS	{DELIM}+
+WS {DELIM}+
 
 DIGITO [0-9]
 
