@@ -7,7 +7,6 @@
 
   	// Declaracao das funcoes
   	void incrementa ();
-  	int retorna (string, int);
 %}
 
 %option yylineno
@@ -25,8 +24,6 @@ LETRA [A-Za-z_]
 
 ID {LETRA}({LETRA}|{DIGITO})*
 
-INT {DIGITO}+
-
 FLOAT {DIGITO}+(\.{DIGITO}+)?([Ee][+-]?{DIGITO}+)?
 
 ASPAS_SIMPLES \'([^'\\\n]|(\'\')*|\\(.|\n))*\'
@@ -39,51 +36,26 @@ STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}|{ASPAS_INVERTIDAS}
 
 %%
 
-<<EOF>>	       {}
-
 {WS}           { incrementa(); }
 
-"var"		   { incrementa(); retorna("var", tk_var); }
-"let"	       { incrementa(); retorna("let", tk_let); }
-"const"		   { incrementa(); retorna("const", tk_const); }
-"function"	   { incrementa(); retorna("function", tk_func); }
-"for"		   { incrementa(); retorna("for", tk_for); }
-"while"		   { incrementa(); retorna("while", tk_while); }
-"if"		   { incrementa(); retorna("if", tk_if); }
-"else"		   { incrementa(); retorna("else", tk_else); }
-"return"	   { incrementa(); retorna("return", tk_return); }
+"let"	       { incrementa(); yylval.v = vetor + "let"; return tk_let; }
+"for"		   { incrementa(); yylval.v = vetor + "for"; return tk_for; }
+"while"		   { incrementa(); yylval.v = vetor + "while"; return tk_while; }
+"if"		   { incrementa(); yylval.v = vetor + "if"; return tk_if; }
+"else"		   { incrementa(); yylval.v = vetor + "else"; return tk_else; }
+"return"	   { incrementa(); yylval.v = vetor + "return"; return tk_return; }
 
-"."		       { incrementa(); retorna(".", tk_pt); }
-";"	       	   { incrementa(); retorna(";", tk_pt_vir); }
-","	       	   { incrementa(); retorna(",", tk_vir); }
-"("			   { incrementa(); retorna("(", tk_abre_paren); }
-")"			   { incrementa(); retorna(")", tk_fecha_paren); }
-"{"			   { incrementa(); retorna("{", tk_abre_chave); }
-"}"			   { incrementa(); retorna("}", tk_fecha_chave); }
-"["			   { incrementa(); retorna("[", tk_abre_colch); }
-"]"			   { incrementa(); retorna("]", tk_fecha_colch); }
+"=="	       { incrementa(); yylval.v = vetor + "=="; return tk_ig; }
+"!="	       { incrementa(); yylval.v = vetor + "!="; return tk_dif; }
+"<="           { incrementa(); yylval.v = vetor + "<="; return tk_menor_ig;  }
+">="           { incrementa(); yylval.v = vetor + ">="; return tk_maior_ig; }
+"+="	       { incrementa(); yylval.v = vetor + "+="; return tk_add_atribui; }
+"++"	       { incrementa(); yylval.v = vetor + "++"; return tk_incrementa; }
 
-"+"            { incrementa(); retorna("+", tk_add); }
-"-"            { incrementa(); retorna("-", tk_sub); }
-"*"            { incrementa(); retorna("*", tk_mul); }
-"/"            { incrementa(); retorna("/", tk_div); }
-"%"            { incrementa(); retorna("%", tk_mod); }
-"="            { incrementa(); retorna("=", tk_atribui); }
-"=="	       { incrementa(); retorna("==", tk_ig); }
-"!="	       { incrementa(); retorna("!=", tk_dif); }
-"<"	           { incrementa(); retorna("<", tk_menor); }
-">"	           { incrementa(); retorna(">", tk_maior); }
-"<="           { incrementa(); retorna("<=", tk_menor_ig); }
-">="           { incrementa(); retorna(">=", tk_maior_ig); }
-
-"+="	       { incrementa(); retorna("+=", tk_add_atribui); }
-"++"	       { incrementa(); retorna("++", tk_incrementa); }
-
-{INT}          { incrementa(); retorna(yytext, tk_int); }
-{FLOAT}        { incrementa(); retorna(yytext, tk_float); }
-{STRING}       { incrementa(); retorna(yytext, tk_string); }
-{ID}           { incrementa(); retorna(yytext, tk_id); }
-.              { incrementa(); retorna(yytext, *yytext); }
+{FLOAT}        { incrementa(); yylval.v = vetor + yytext; return tk_float; }
+{STRING}       { incrementa(); yylval.v = vetor + yytext; return tk_string; }
+{ID}           { incrementa(); yylval.v = vetor + yytext; return tk_id; }
+.              { incrementa(); yylval.v = vetor + yytext; return *yytext; }
 
 %%
 
@@ -93,9 +65,4 @@ void incrementa () {
 			yylineno++; // Contador de linhas do Lex
 		}
 	}
-}
-
-int retorna (string valor, int token) {
-	yylval.v.push_back(valor);
-	return token;
 }
