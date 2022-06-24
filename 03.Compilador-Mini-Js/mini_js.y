@@ -59,6 +59,8 @@ CMDS
 
 CMD
   : ATRIBUICAO TERMINADOR { $$.v = $1.v + "^"; }
+  | IF_CMD { $$.v = $1.v; }
+  | tk_let DECLARACAO_VARIAVEL TERMINADOR { $$.v = $2.v; }
   ;
 
 ATRIBUICAO 
@@ -66,6 +68,21 @@ ATRIBUICAO
   | LVALUE '=' ATRIBUICAO { $$.v = $1.v + $3.v + "="; }
   | LVALUEPROP '=' ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; }
   | LVALUEPROP { $$.v = $1.v + "[@]"; }
+  ;
+
+IF_CMD
+  : tk_if '(' EXPRESSAO ')' ESCOPO tk_else ESCOPO
+  | tk_if '(' EXPRESSAO ')' ESCOPO
+  ;
+
+DECLARACAO_VARIAVEL
+  : DECLARACAO
+  | DECLARACAO ',' DECLARACAO_VARIAVEL { $$.v = $1.v + $3.v; }
+  ;
+
+DECLARACAO
+  : LVALUE { $$.v = $1.v + "&"; }
+  | LVALUE '=' EXPRESSAO { $$.v = $1.v + "&" + $1.v + $3.v + "=" + "^"; }
   ;
 
 EXPRESSAO
@@ -88,6 +105,8 @@ EXPRESSAO_PRIMARIA
   | tk_float { $$.v = $1.v; }
   | tk_string { $$.v = $1.v; }
   | '(' EXPRESSAO ')' { $$ = $2; }
+  | OBJETO_LITERAL { $$.v = vetor + "{}"; }
+  | ARRAY_LITERAL { $$.v = vetor + "[]"; }
   ;
 
 LVALUE
@@ -103,6 +122,19 @@ PROP
 
 LVALUEPROP
   : LVALUE PROP { $$.v = $1.v + "@" + $2.v; }
+  ;
+
+OBJETO_LITERAL
+  : '{' '}' 
+  ;
+
+ARRAY_LITERAL
+  : '[' ']'
+  ;
+
+ESCOPO
+  : '{' '}'
+  | '{' CMDS '}'
   ;
 
 TERMINADOR
