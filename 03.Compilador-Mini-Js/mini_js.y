@@ -45,7 +45,6 @@ vector<string> vetor;
 
 // Start indica o símbolo inicial da gramática
 %start S
-%define parse.error verbose
 
 %%
 
@@ -54,74 +53,56 @@ S
   ;
 
 CMDS 
-  : CMD CMDS { $$.v = $1.v + $2.v; }
-  | CMD { $$.v = $1.v; }
+  : CMD { $$.v = $1.v; }
+  | CMDS CMD { $$.v = $1.v + $2.v; }
   ;
 
 CMD
-  : EXPRESSAO TERMINADOR { $$.v = $1.v + "^"; }
+  : ATRIBUICAO TERMINADOR { $$.v = $1.v + "^"; }
+  ;
+
+ATRIBUICAO 
+  : EXPRESSAO { $$ = $1; }
+  | LVALUE '=' ATRIBUICAO { $$.v = $1.v + $3.v + "="; }
+  | LVALUEPROP '=' ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; }
+  | LVALUEPROP { $$.v = $1.v + "[@]"; }
   ;
 
 EXPRESSAO
-  : EXPRESSAO_ATRIBUICAO
-  | EXPRESSAO ',' EXPRESSAO_ATRIBUICAO
-  ;
-
-EXPRESSAO_ATRIBUICAO 
-  : EXPRESSAO_IGUALDADE
-  | EXPRESSAO_UNARIA OP_ATRIBUICAO EXPRESSAO_ATRIBUICAO
-  ;
-
-EXPRESSAO_IGUALDADE
-  : EXPRESSAO_RELACIONAL
-  | EXPRESSAO_IGUALDADE tk_ig EXPRESSAO_RELACIONAL { $$.v = $1.v + $3.v + "=="; }
-  | EXPRESSAO_IGUALDADE tk_dif EXPRESSAO_RELACIONAL { $$.v = $1.v + $3.v + "!="; }
-  ;
-
-EXPRESSAO_RELACIONAL
-  : EXPRESSAO_ADITIVA
-  | EXPRESSAO_RELACIONAL '<' EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + "<"; }
-  | EXPRESSAO_RELACIONAL '>' EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + ">"; }
-  | EXPRESSAO_RELACIONAL tk_menor_ig EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + "<="; }
-  | EXPRESSAO_RELACIONAL tk_maior_ig EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + ">="; }
-  ;
-
-EXPRESSAO_ADITIVA
-  : EXPRESSAO_MULTIPLICATIVA 
-  | EXPRESSAO_ADITIVA '+' EXPRESSAO_MULTIPLICATIVA { $$.v = $1.v + $3.v + "+"; }
-  | EXPRESSAO_ADITIVA '-' EXPRESSAO_MULTIPLICATIVA { $$.v = $1.v + $3.v + "-"; }
-  ;
-
-EXPRESSAO_MULTIPLICATIVA
-  : EXPRESSAO_UNARIA
-  | EXPRESSAO_MULTIPLICATIVA '*' EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "*"; }
-  | EXPRESSAO_MULTIPLICATIVA '/' EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "/"; }
-  | EXPRESSAO_MULTIPLICATIVA '%' EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "%"; }
-  ;
-
-EXPRESSAO_UNARIA
-  : EXPRESSAO_POSFIXA
-  | tk_incrementa EXPRESSAO_UNARIA
-  ;
-
-EXPRESSAO_POSFIXA
-  : EXPRESSAO_PRIMARIA
-  | EXPRESSAO_POSFIXA '[' EXPRESSAO ']'
-  | EXPRESSAO_POSFIXA '(' ')'
-  | EXPRESSAO_POSFIXA '.' tk_id
-  | EXPRESSAO_POSFIXA tk_incrementa
+  : EXPRESSAO_PRIMARIA 
+  | EXPRESSAO '+' EXPRESSAO { $$.v = $1.v + $3.v + "+"; }
+  | EXPRESSAO '-' EXPRESSAO { $$.v = $1.v + $3.v + "-"; }
+  | EXPRESSAO '*' EXPRESSAO { $$.v = $1.v + $3.v + "*"; }
+  | EXPRESSAO '/' EXPRESSAO { $$.v = $1.v + $3.v + "/"; }
+  | EXPRESSAO '%' EXPRESSAO { $$.v = $1.v + $3.v + "%"; }
+  | EXPRESSAO '<' EXPRESSAO { $$.v = $1.v + $3.v + "<"; }
+  | EXPRESSAO '>' EXPRESSAO { $$.v = $1.v + $3.v + ">"; }
+  | EXPRESSAO tk_menor_ig EXPRESSAO { $$.v = $1.v + $3.v + "<="; }
+  | EXPRESSAO tk_maior_ig EXPRESSAO { $$.v = $1.v + $3.v + ">="; }
+  | EXPRESSAO tk_ig EXPRESSAO { $$.v = $1.v + $3.v + "=="; }
+  | EXPRESSAO tk_dif EXPRESSAO { $$.v = $1.v + $3.v + "!="; }
   ;
 
 EXPRESSAO_PRIMARIA
-  : tk_id
-  | tk_float
-  | tk_string
-  | '(' EXPRESSAO ')'
+  : LVALUE { $$.v = $1.v + "@"; }
+  | tk_float { $$.v = $1.v; }
+  | tk_string { $$.v = $1.v; }
+  | '(' EXPRESSAO ')' { $$ = $2; }
   ;
 
-OP_ATRIBUICAO
-  : '='
-  | tk_add_atribui
+LVALUE
+  : tk_id { $$.v = $1.v; }
+  ;
+
+PROP
+  : '[' EXPRESSAO ']' { $$.v = $2.v; }
+  | '.' tk_id { $$.v = $2.v; }
+  | '[' EXPRESSAO ']' PROP { $$.v = $2.v + "[@]" + $4.v; }
+  | '.' tk_id PROP { $$.v = $2.v + "[@]" + $3.v; }
+  ;
+
+LVALUEPROP
+  : LVALUE PROP { $$.v = $1.v + "@" + $2.v; }
   ;
 
 TERMINADOR
