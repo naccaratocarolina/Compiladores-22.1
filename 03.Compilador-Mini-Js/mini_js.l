@@ -6,7 +6,7 @@
 	using namespace std;
 
   	// Declaracao das funcoes
-  	void incrementa ();
+  	void incrementa (void);
 %}
 
 %option yylineno
@@ -36,26 +36,26 @@ STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}|{ASPAS_INVERTIDAS}
 
 %%
 
-{WS}           { incrementa(); }
+{WS}        { incrementa(); }
 
-"let"	       { incrementa(); yylval.v = vetor + "let"; return tk_let; }
-"for"		   { incrementa(); yylval.v = vetor + "for"; return tk_for; }
-"while"		   { incrementa(); yylval.v = vetor + "while"; return tk_while; }
-"if"		   { incrementa(); yylval.v = vetor + "if"; return tk_if; }
-"else"		   { incrementa(); yylval.v = vetor + "else"; return tk_else; }
-"return"	   { incrementa(); yylval.v = vetor + "return"; return tk_return; }
+"let"       { incrementa(); yylval.v = vetor + "let"; return tk_let; }
+"for"       { incrementa(); yylval.v = vetor + "for"; return tk_for; }
+"while"     { incrementa(); yylval.v = vetor + "while"; return tk_while; }
+"if"        { incrementa(); yylval.v = vetor + "if"; return tk_if; }
+"else"      { incrementa(); yylval.v = vetor + "else"; return tk_else; }
+"return"    { incrementa(); yylval.v = vetor + "return"; return tk_return; }
 
-"=="	       { incrementa(); yylval.v = vetor + "=="; return tk_ig; }
-"!="	       { incrementa(); yylval.v = vetor + "!="; return tk_dif; }
-"<="           { incrementa(); yylval.v = vetor + "<="; return tk_menor_ig;  }
-">="           { incrementa(); yylval.v = vetor + ">="; return tk_maior_ig; }
-"+="	       { incrementa(); yylval.v = vetor + "+="; return tk_add_atribui; }
-"++"	       { incrementa(); yylval.v = vetor + "++"; return tk_incrementa; }
+"=="        { incrementa(); yylval.v = vetor + "=="; return tk_ig; }
+"!="        { incrementa(); yylval.v = vetor + "!="; return tk_dif; }
+"<="        { incrementa(); yylval.v = vetor + "<="; return tk_menor_ig;  }
+">="        { incrementa(); yylval.v = vetor + ">="; return tk_maior_ig; }
+"+="        { incrementa(); yylval.v = vetor + "+="; return tk_add_atribui; }
+"++"        { incrementa(); yylval.v = vetor + "++"; return tk_incrementa; }
 
-{FLOAT}        { incrementa(); yylval.v = vetor + yytext; return tk_float; }
-{STRING}       { incrementa(); yylval.v = vetor + yytext; return tk_string; }
-{ID}           { incrementa(); yylval.v = vetor + yytext; return tk_id; }
-.              { incrementa(); yylval.v = vetor + yytext; return *yytext; }
+{FLOAT}     { incrementa(); yylval.v = vetor + yytext; return tk_float; }
+{STRING}    { incrementa(); yylval.v = vetor + yytext; return tk_string; }
+{ID}        { incrementa(); yylval.v = vetor + yytext; return tk_id; }
+.           { incrementa(); yylval.v = vetor + yytext; return *yytext; }
 
 %%
 
