@@ -6,7 +6,7 @@
 	using namespace std;
 
   	// Declaracao das funcoes
-  	void incrementa (void);
+  	int retorna(string, int);
 %}
 
 %option yylineno
@@ -26,6 +26,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 
 FLOAT {DIGITO}+(\.{DIGITO}+)?([Ee][+-]?{DIGITO}+)?
 
+NEG \-FLOAT
+
 ASPAS_SIMPLES \'([^'\\\n]|(\'\')*|\\(.|\n))*\'
 
 ASPAS_DUPLAS \"([^"\\\n]|(\"\")*|\\(.|\n))*\"
@@ -36,33 +38,29 @@ STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}|{ASPAS_INVERTIDAS}
 
 %%
 
-{WS}        { incrementa(); }
+{WS}        {  }
 
-"let"       { incrementa(); yylval.v = vetor + "let"; return tk_let; }
-"for"       { incrementa(); yylval.v = vetor + "for"; return tk_for; }
-"while"     { incrementa(); yylval.v = vetor + "while"; return tk_while; }
-"if"        { incrementa(); yylval.v = vetor + "if"; return tk_if; }
-"else"      { incrementa(); yylval.v = vetor + "else"; return tk_else; }
-"return"    { incrementa(); yylval.v = vetor + "return"; return tk_return; }
+"let"       { return retorna("let", tk_let); }
+"for"       { return retorna("for", tk_for); }
+"while"     { return retorna("while", tk_while); }
+"if"        { return retorna("if", tk_if); }
+"else"      { return retorna("else", tk_else); }
 
-"=="        { incrementa(); yylval.v = vetor + "=="; return tk_ig; }
-"!="        { incrementa(); yylval.v = vetor + "!="; return tk_dif; }
-"<="        { incrementa(); yylval.v = vetor + "<="; return tk_menor_ig;  }
-">="        { incrementa(); yylval.v = vetor + ">="; return tk_maior_ig; }
-"+="        { incrementa(); yylval.v = vetor + "+="; return tk_add_atribui; }
-"++"        { incrementa(); yylval.v = vetor + "++"; return tk_incrementa; }
+"=="        { return retorna("==", tk_ig); }
+"!="        { return retorna("!=", tk_dif); }
+"<="        { return retorna("<=", tk_menor_ig);  }
+">="        { return retorna(">=", tk_maior_ig); }
+"+="        { return retorna("+=", tk_add_atribui); }
+"++"        { return retorna("++", tk_incrementa); }
 
-{FLOAT}     { incrementa(); yylval.v = vetor + yytext; return tk_float; }
-{STRING}    { incrementa(); yylval.v = vetor + yytext; return tk_string; }
-{ID}        { incrementa(); yylval.v = vetor + yytext; return tk_id; }
-.           { incrementa(); yylval.v = vetor + yytext; return *yytext; }
+{FLOAT}     { return retorna(yytext, tk_float); }
+{STRING}    { return retorna(yytext, tk_string); }
+{ID}        { return retorna(yytext, tk_id); }
+.           { return retorna(yytext, *yytext); }
 
 %%
 
-void incrementa () {
-	for (int i=0; yytext[i]!='\0'; i++) {
-		if (yytext[i] == '\n') {
-			yylineno++; // Contador de linhas do Lex
-		}
-	}
+int retorna (string valor, int tk) {  
+  yylval.v = vetor + valor;
+  return tk;
 }
