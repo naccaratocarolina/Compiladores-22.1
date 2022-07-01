@@ -31,6 +31,7 @@ vector<string> resolve_enderecos (vector<string>);
 void registra_var_declarada (string);
 void verifica_var_nao_declarada (string);
 void verifica_var_declarada (string);
+void desempilha_elementos_array (vector<string>);
 
 // Declaracao de variaveis auxiliares
 extern int yylineno;
@@ -96,8 +97,9 @@ DECLARACAO
   ;
 
 FOR_CMD
-  : tk_for '(' tk_let DECLARACAO ';' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $4.v + (":" + start_for) + $6.v + "!" + end_for + "?" + $10.v + $8.v + "^" + start_for + "#" + (":" + end_for); }
-  | tk_for '(' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $5.v + "!" + end_for + "?" + $9.v + $7.v + "^" + start_for + "#" + (":" + end_for); }
+  : tk_for '(' DECLARACAO_CMD EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
+  | tk_for '(' EXPRESSAO_CMD EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
+  ;
   ;
 
 WHILE_CMD
@@ -198,7 +200,7 @@ OBJETO_CHAVE
 
 ARRAY_LITERAL
   : '[' ']' { $$.v = vetor + "[]"; }
-  | '[' ARRAY_ELEMENTOS ']' { $$.v = vetor + "[]"; int quant_elementos = array_elementos.size(); for (int i=0; i<quant_elementos; i++) { $$.v = $$.v + to_string(i) + array_elementos.back() + "[<=]"; array_elementos.pop_back(); } }
+  | '[' ARRAY_ELEMENTOS ']' { $$.v = vetor + "[]"; desempilha_elementos_array($$.v); }
   ;
 
 ARRAY_ELEMENTOS
@@ -236,6 +238,13 @@ void verifica_var_declarada (string variavel) {
   if (variaveis_declaradas.count(variavel) > 0) {
     cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[variavel] << "." << endl;
     exit(1);
+  }
+}
+
+void desempilha_elementos_array (vector<string> v) {
+  for (int i=0; i<array_elementos.size(); i++) { 
+    v = v + to_string(i) + array_elementos.back() + "[<=]"; 
+    array_elementos.pop_back();
   }
 }
 
