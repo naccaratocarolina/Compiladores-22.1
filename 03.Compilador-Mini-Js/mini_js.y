@@ -22,6 +22,7 @@ void yyerror (const char *);
 vector<string> operator+ (vector<string>, vector<string>);
 vector<string> operator+ (vector<string>, string);
 vector<string> operator+ (string, vector<string>);
+vector<string> operator+= ( vector<string>, vector<string>);
 vector<string> concatena(vector<string>, vector<string>);
 
 string gera_label (string);
@@ -34,6 +35,7 @@ void verifica_var_declarada (string);
 // Declaracao de variaveis auxiliares
 extern int yylineno;
 vector<string> vetor;
+vector<vector<string>> array_elementos;
 map<string, int> variaveis_declaradas; // map <nome da variavel, linha em que ela foi>
 
 %}
@@ -44,10 +46,10 @@ map<string, int> variaveis_declaradas; // map <nome da variavel, linha em que el
 // Operadores
 %token tk_ig tk_dif tk_menor_ig tk_maior_ig tk_add_atribui tk_incrementa
 
+%left '<' '>' tk_menor_ig tk_maior_ig tk_ig tk_dif
 %left '+' '-'
 %left '*' '/' '%'
-%left '<' '>' tk_menor_ig tk_maior_ig tk_ig tk_dif
-%right '='
+%right '=' tk_add_atribui tk_incrementa
 
 // Start indica o símbolo inicial da gramática
 %start S
@@ -64,39 +66,23 @@ CMDS
   ;
 
 CMD
-  : ATRIBUICAO_CMD
+  : EXPRESSAO_CMD
   | FOR_CMD
   | WHILE_CMD
   | IF_CMD
   | DECLARACAO_CMD 
   ;
 
-ATRIBUICAO_CMD
-  : ATRIBUICAO TERMINADOR { $$.v = $1.v + "^"; }
+EXPRESSAO_CMD
+  : EXPRESSAO ';' { $$.v = $1.v + "^"; }
   ;
 
-ATRIBUICAO 
-  : EXPRESSAO
-  | LVALUE '=' ATRIBUICAO { $$.v = $1.v + $3.v + "="; verifica_var_nao_declarada($1.v[0]); }
-  | LVALUEPROP '=' ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; verifica_var_nao_declarada($1.v[0]); }
-  ;
-
-FOR_CMD
-  : tk_for '(' DECLARACAO_CMD ATRIBUICAO ';' ATRIBUICAO ')' ESCOPO TERMINADOR { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
-  | tk_for '(' ATRIBUICAO ';' ATRIBUICAO ';' ATRIBUICAO ')' ESCOPO TERMINADOR { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $5.v + "!" + end_for + "?" + $9.v + $7.v + "^" + start_for + "#" + (":" + end_for); }
-  ;
-
-WHILE_CMD
-  : tk_while '(' ATRIBUICAO ')' ESCOPO TERMINADOR { string start_while = gera_label("start_while"); string end_while = gera_label("end_while"); $$.v = vetor + (":" + start_while) + $3.v + "!" + end_while + "?" + $5.v + start_while + "#" + (":" + end_while); }
-  ;
-
-IF_CMD
-  : tk_if '(' EXPRESSAO ')' ESCOPO tk_else ESCOPO { string else_if = gera_label("else_if"); string continue_if = gera_label("continue_if"); $$.v = $3.v + "!" + else_if + "?" + $5.v + continue_if + "#" + (":" + else_if) + $7.v + (":" + continue_if); }
-  | tk_if '(' EXPRESSAO ')' ESCOPO { string end_if = gera_label("end_if"); $$.v = $3.v + "!" + end_if + "?" + $5.v + (":" + end_if); }
+EXPRESSAO
+  : EXPRESSAO_ATRIBUICAO
   ;
 
 DECLARACAO_CMD
-  : tk_let DECLARACAO_VARIAVEL TERMINADOR { $$.v = $2.v; }
+  : tk_let DECLARACAO_VARIAVEL ';' { $$.v = $2.v; }
   ;
 
 DECLARACAO_VARIAVEL
@@ -109,31 +95,73 @@ DECLARACAO
   | LVALUE '=' EXPRESSAO { $$.v = $1.v + "&" + $1.v + $3.v + "=" + "^"; verifica_var_declarada($1.v[0]); registra_var_declarada($1.v[0]); }
   ;
 
-EXPRESSAO
-  : EXPRESSAO_PRIMARIA 
-  | EXPRESSAO '+' EXPRESSAO { $$.v = $1.v + $3.v + "+"; }
-  | EXPRESSAO '-' EXPRESSAO { $$.v = $1.v + $3.v + "-"; }
-  | EXPRESSAO '*' EXPRESSAO { $$.v = $1.v + $3.v + "*"; }
-  | EXPRESSAO '/' EXPRESSAO { $$.v = $1.v + $3.v + "/"; }
-  | EXPRESSAO '%' EXPRESSAO { $$.v = $1.v + $3.v + "%"; }
-  | EXPRESSAO '<' EXPRESSAO { $$.v = $1.v + $3.v + "<"; }
-  | EXPRESSAO '>' EXPRESSAO { $$.v = $1.v + $3.v + ">"; }
-  | EXPRESSAO tk_menor_ig EXPRESSAO { $$.v = $1.v + $3.v + "<="; }
-  | EXPRESSAO tk_maior_ig EXPRESSAO { $$.v = $1.v + $3.v + ">="; }
-  | EXPRESSAO tk_ig EXPRESSAO { $$.v = $1.v + $3.v + "=="; }
-  | EXPRESSAO tk_dif EXPRESSAO { $$.v = $1.v + $3.v + "!="; }
+FOR_CMD
+  : tk_for '(' tk_let DECLARACAO ';' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $4.v + (":" + start_for) + $6.v + "!" + end_for + "?" + $10.v + $8.v + "^" + start_for + "#" + (":" + end_for); }
+  | tk_for '(' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $5.v + "!" + end_for + "?" + $9.v + $7.v + "^" + start_for + "#" + (":" + end_for); }
+  ;
+
+WHILE_CMD
+  : tk_while '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO TERMINADOR { string start_while = gera_label("start_while"); string end_while = gera_label("end_while"); $$.v = vetor + (":" + start_while) + $3.v + "!" + end_while + "?" + $5.v + start_while + "#" + (":" + end_while); }
+  ;
+
+IF_CMD
+  : tk_if '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO tk_else ESCOPO { string else_if = gera_label("else_if"); string continue_if = gera_label("continue_if"); $$.v = $3.v + "!" + else_if + "?" + $5.v + continue_if + "#" + (":" + else_if) + $7.v + (":" + continue_if); }
+  | tk_if '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string end_if = gera_label("end_if"); $$.v = $3.v + "!" + end_if + "?" + $5.v + (":" + end_if); }
+  ;
+
+EXPRESSAO_ATRIBUICAO
+  : EXPRESSAO_IGUALDADE
+  | LVALUE '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "="; verifica_var_nao_declarada($1.v[0]); }
+  | LVALUEPROP '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; verifica_var_nao_declarada($1.v[0]); }
+  | LVALUE tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "@" + $3.v + "+" + "="; verifica_var_nao_declarada($1.v[0]); }
+  | LVALUEPROP tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "[@]" + $3.v + "+" + "[=]"; verifica_var_nao_declarada($1.v[0]); }
+  ;
+
+EXPRESSAO_IGUALDADE
+  : EXPRESSAO_RELACIONAL
+  | EXPRESSAO_IGUALDADE tk_ig EXPRESSAO_RELACIONAL { $$.v = $1.v + $3.v + "=="; }
+  | EXPRESSAO_IGUALDADE tk_dif EXPRESSAO_RELACIONAL { $$.v = $1.v + $3.v + "!="; }
+  ;
+
+EXPRESSAO_RELACIONAL
+  : EXPRESSAO_ADITIVA
+  | EXPRESSAO_RELACIONAL '<' EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + "<"; }
+  | EXPRESSAO_RELACIONAL '>' EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + ">"; }
+  | EXPRESSAO_RELACIONAL tk_menor_ig EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + "<="; }
+  | EXPRESSAO_RELACIONAL tk_maior_ig EXPRESSAO_ADITIVA { $$.v = $1.v + $3.v + ">="; }
+  ;
+
+EXPRESSAO_ADITIVA
+  : EXPRESSAO_MULTIPLICATIVA
+  | EXPRESSAO_ADITIVA '+' EXPRESSAO_MULTIPLICATIVA { $$.v = $1.v + $3.v + "+"; }
+  | EXPRESSAO_ADITIVA '-' EXPRESSAO_MULTIPLICATIVA { $$.v = $1.v + $3.v + "-"; }
+  ;
+
+EXPRESSAO_MULTIPLICATIVA
+  : EXPRESSAO_UNARIA
+  | EXPRESSAO_MULTIPLICATIVA '*' EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "*"; }
+  | EXPRESSAO_MULTIPLICATIVA '/' EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "/"; }
+  | EXPRESSAO_MULTIPLICATIVA '%' EXPRESSAO_UNARIA { $$.v = $1.v + $3.v + "%"; }
+  ;
+
+EXPRESSAO_UNARIA
+  : EXPRESSAO_POSFIXA
+  | '-' tk_float { $$.v = "0" + $2.v + "-"; }
+  ;
+
+EXPRESSAO_POSFIXA
+  : EXPRESSAO_PRIMARIA
+  | EXPRESSAO_PRIMARIA tk_incrementa { $$.v = $1.v + "@" + $1.v + $1.v + "@" + "1" + "+" + "=" + "^"; }
   ;
 
 EXPRESSAO_PRIMARIA
-  : tk_float 
-  | '-' tk_float { $$.v = "0" + $2.v + "-"; }
+  : tk_float
   | tk_string
   | LVALUE { $$.v = $1.v + "@"; verifica_var_nao_declarada($1.v[0]); }
-  | LVALUE tk_incrementa { }
   | LVALUEPROP { $$.v = $1.v + "[@]"; verifica_var_nao_declarada($1.v[0]); }
   | '(' EXPRESSAO ')' { $$ = $2; }
-  | OBJETO_LITERAL { $$.v = vetor + "{}"; }
-  | ARRAY_LITERAL { $$.v = vetor + "[]"; }
+  | OBJETO_LITERAL
+  | ARRAY_LITERAL
   ;
 
 LVALUE
@@ -141,9 +169,9 @@ LVALUE
   ;
 
 PROP
-  : '[' ATRIBUICAO ']' { $$.v = $2.v; }
+  : '[' EXPRESSAO ']' { $$.v = $2.v; }
   | '.' tk_id { $$.v = $2.v; }
-  | '[' ATRIBUICAO ']' PROP { $$.v = $2.v + "[@]" + $4.v; }
+  | '[' EXPRESSAO ']' PROP { $$.v = $2.v + "[@]" + $4.v; }
   | '.' tk_id PROP { $$.v = $2.v + "[@]" + $3.v; }
   ;
 
@@ -152,21 +180,41 @@ LVALUEPROP
   ;
 
 OBJETO_LITERAL
-  : '{' '}' 
+  : '{' '}' { $$.v = vetor + "{}"; }
+  | '{' OBJETO_CHAVE_VALOR '}' { $$.v = vetor + "{}" + $2.v; }
+  ;
+
+OBJETO_CHAVE_VALOR
+  : OBJETO_CHAVE ':' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[<=]"; }
+  | OBJETO_CHAVE_VALOR ':' OBJETO_CHAVE ',' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[<=]" + $5.v; }
+  | OBJETO_CHAVE_VALOR ':'{ $$.v = $1.v + "[<=]"; }
+  ;
+
+OBJETO_CHAVE
+  : tk_string
+  | tk_float
+  | LVALUE
   ;
 
 ARRAY_LITERAL
-  : '[' ']'
+  : '[' ']' { $$.v = vetor + "[]"; }
+  | '[' ARRAY_ELEMENTOS ']' { $$.v = vetor + "[]"; int quant_elementos = array_elementos.size(); for (int i=0; i<quant_elementos; i++) { $$.v = $$.v + to_string(i) + array_elementos.back() + "[<=]"; array_elementos.pop_back(); } }
+  ;
+
+ARRAY_ELEMENTOS
+  : EXPRESSAO { array_elementos.push_back($1.v); }
+  | ARRAY_ELEMENTOS ',' EXPRESSAO_ATRIBUICAO { array_elementos.push_back($1.v); }
   ;
 
 ESCOPO
-  : '{' '}' { $$.v = vetor + ""; }
-  | '{' CMDS '}' { $$.v = $2.v; }
-  | CMD
+  : '{' '}' TERMINADOR { $$.v = vetor + ""; }
+  | '{' CMDS '}' TERMINADOR { $$.v = $2.v; }
+  | CMD { $$.v = $1.v; }
   ;
 
 TERMINADOR
   : ';' 
+  | 
   ;
 
 %%
@@ -202,6 +250,12 @@ vector<string> operator+( vector<string> a, string b ) {
 
 vector<string> operator+( string a, vector<string> b ) {
   return b + a;
+}
+
+vector<string> operator+=( vector<string> a, vector<string> b ) {
+  auto ret = concatena( a, b );
+  cout << ret[3] << endl;
+  return ret;
 }
 
 vector<string> concatena( vector<string> a, vector<string> b ) {
