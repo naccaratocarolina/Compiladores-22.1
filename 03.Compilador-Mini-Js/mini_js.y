@@ -146,17 +146,17 @@ EXPRESSAO_MULTIPLICATIVA
 
 EXPRESSAO_UNARIA
   : EXPRESSAO_POSFIXA
-  | '-' tk_float { $$.v = "0" + $2.v + "-"; }
+  | '-' tk_float { $$.v = vetor + "0" + $2.v + "-"; }
   ;
 
 EXPRESSAO_POSFIXA
   : EXPRESSAO_PRIMARIA
-  | EXPRESSAO_PRIMARIA tk_incrementa { $$.v = $1.v + "@" + $1.v + $1.v + "@" + "1" + "+" + "=" + "^"; }
+  | EXPRESSAO_PRIMARIA tk_incrementa { $$.v = vetor + $1.v + "@" + $1.v + $1.v + "@" + "1" + "+" + "=" + "^"; }
   ;
 
 EXPRESSAO_PRIMARIA
-  : tk_float
-  | tk_string
+  : tk_float { $$.v = $1.v; }
+  | tk_string { $$.v = $1.v; }
   | LVALUE { $$.v = $1.v + "@"; verifica_var_nao_declarada($1.v[0]); }
   | LVALUEPROP { $$.v = $1.v + "[@]"; verifica_var_nao_declarada($1.v[0]); }
   | '(' EXPRESSAO ')' { $$ = $2; }
@@ -191,9 +191,9 @@ OBJETO_CHAVE_VALOR
   ;
 
 OBJETO_CHAVE
-  : tk_string
-  | tk_float
-  | LVALUE
+  : tk_string { $$.v = $1.v; }
+  | tk_float { $$.v = $1.v; }
+  | LVALUE { $$.v = $1.v; }
   ;
 
 ARRAY_LITERAL
