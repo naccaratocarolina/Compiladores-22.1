@@ -74,7 +74,7 @@ CMD
   ;
 
 EXPRESSAO_CMD
-  : EXPRESSAO ';' { $$.v = $1.v + "^"; }
+  : EXPRESSAO ';' TERMINADOR { $$.v = $1.v + "^"; }
   ;
 
 EXPRESSAO
@@ -151,7 +151,7 @@ EXPRESSAO_UNARIA
 
 EXPRESSAO_POSFIXA
   : EXPRESSAO_PRIMARIA
-  | EXPRESSAO_PRIMARIA tk_incrementa { $$.v = vetor + $1.v + "@" + $1.v + $1.v + "@" + "1" + "+" + "=" + "^"; }
+  | LVALUE tk_incrementa { $$.v = $1.v + "@" + $1.v + $1.v + "@" + "1" + "+" + "=" + "^"; }
   ;
 
 EXPRESSAO_PRIMARIA
