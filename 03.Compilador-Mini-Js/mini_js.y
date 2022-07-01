@@ -22,7 +22,6 @@ void yyerror (const char *);
 vector<string> operator+ (vector<string>, vector<string>);
 vector<string> operator+ (vector<string>, string);
 vector<string> operator+ (string, vector<string>);
-vector<string> operator+= ( vector<string>, vector<string>);
 vector<string> concatena(vector<string>, vector<string>);
 
 string gera_label (string);
@@ -31,6 +30,7 @@ vector<string> resolve_enderecos (vector<string>);
 void registra_var_declarada (string);
 void verifica_var_nao_declarada (string);
 void verifica_var_declarada (string);
+void imprime_msg_erro (string, bool);
 void desempilha_elementos_array (vector<string>);
 
 // Declaracao de variaveis auxiliares
@@ -47,10 +47,6 @@ map<string, int> variaveis_declaradas; // map <nome da variavel, linha em que el
 // Operadores
 %token tk_ig tk_dif tk_menor_ig tk_maior_ig tk_add_atribui tk_incrementa
 
-%left '<' '>' tk_menor_ig tk_maior_ig tk_ig tk_dif
-%left '+' '-'
-%left '*' '/' '%'
-%right '=' tk_add_atribui tk_incrementa
 
 // Start indica o símbolo inicial da gramática
 %start S
@@ -103,7 +99,7 @@ FOR_CMD
   ;
 
 WHILE_CMD
-  : tk_while '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO TERMINADOR { string start_while = gera_label("start_while"); string end_while = gera_label("end_while"); $$.v = vetor + (":" + start_while) + $3.v + "!" + end_while + "?" + $5.v + start_while + "#" + (":" + end_while); }
+  : tk_while '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_while = gera_label("start_while"); string end_while = gera_label("end_while"); $$.v = vetor + (":" + start_while) + $3.v + "!" + end_while + "?" + $5.v + start_while + "#" + (":" + end_while); }
   ;
 
 IF_CMD
@@ -228,17 +224,20 @@ void registra_var_declarada (string variavel) {
 }
 
 void verifica_var_nao_declarada (string variavel) {
-  if (variaveis_declaradas.count(variavel) == 0) {
-    cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
-    exit(1);
-  }
+  if (variaveis_declaradas.count(variavel) == 0) imprime_msg_erro(variavel, true);
 }
 
 void verifica_var_declarada (string variavel) {
-  if (variaveis_declaradas.count(variavel) > 0) {
+  if (variaveis_declaradas.count(variavel) > 0) imprime_msg_erro(variavel, false);
+}
+
+void imprime_msg_erro (string variavel, bool tipo) {
+  if (tipo) {
+    cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
+  } else {
     cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[variavel] << "." << endl;
-    exit(1);
   }
+  exit(1);
 }
 
 void desempilha_elementos_array (vector<string> v) {
@@ -259,12 +258,6 @@ vector<string> operator+( vector<string> a, string b ) {
 
 vector<string> operator+( string a, vector<string> b ) {
   return b + a;
-}
-
-vector<string> operator+=( vector<string> a, vector<string> b ) {
-  auto ret = concatena( a, b );
-  cout << ret[3] << endl;
-  return ret;
 }
 
 vector<string> concatena( vector<string> a, vector<string> b ) {
