@@ -47,6 +47,10 @@ map<string, int> variaveis_declaradas; // map <nome da variavel, linha em que el
 // Operadores
 %token tk_ig tk_dif tk_menor_ig tk_maior_ig tk_add_atribui tk_incrementa
 
+%left '<' '>' tk_menor_ig tk_maior_ig tk_ig tk_dif
+%left '+' '-'
+%left '*' '/' '%'
+%right '=' tk_add_atribui tk_incrementa
 
 // Start indica o símbolo inicial da gramática
 %start S
@@ -79,15 +83,15 @@ EXPRESSAO
   ;
 
 DECLARACAO_CMD
-  : tk_let DECLARACAO_VARIAVEL ';' { $$.v = $2.v; }
-  ;
-
-DECLARACAO_VARIAVEL
-  : DECLARACAO
-  | DECLARACAO ',' DECLARACAO_VARIAVEL { $$.v = $1.v + $3.v; }
+  : tk_let DECLARACAO ';' { $$.v = $2.v; }
   ;
 
 DECLARACAO
+  : DECLARACAO_VARIAVEL
+  | DECLARACAO_VARIAVEL ',' DECLARACAO { $$.v = $1.v + $3.v; }
+  ;
+
+DECLARACAO_VARIAVEL
   : LVALUE { $$.v = $1.v + "&"; verifica_var_declarada($1.v[0]); registra_var_declarada($1.v[0]); }
   | LVALUE '=' EXPRESSAO { $$.v = $1.v + "&" + $1.v + $3.v + "=" + "^"; verifica_var_declarada($1.v[0]); registra_var_declarada($1.v[0]); }
   ;
@@ -205,8 +209,7 @@ ARRAY_ELEMENTOS
   ;
 
 ESCOPO
-  : '{' '}' TERMINADOR { $$.v = vetor + ""; }
-  | '{' CMDS '}' TERMINADOR { $$.v = $2.v; }
+  : '{' CMDS '}' TERMINADOR { $$.v = $2.v; }
   | CMD { $$.v = $1.v; }
   ;
 
