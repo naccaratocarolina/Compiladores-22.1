@@ -176,14 +176,18 @@ EXPRESSAO_PRIMARIA
   ;
 
 DECLARACAO_FUNCAO
-  : tk_func LVALUE '(' PARAMETROS ')' ESCOPO { string comeco_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + comeco_func + "[=]" + "^"; funcoes = funcoes + (":" + comeco_func) + $6.v + "undefined" + "@" + "'&retorno'" + "@" + "~"; }
+  : tk_func LVALUE '(' PARAMETROS ')' ESCOPO { string comeco_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + comeco_func + "[=]" + "^"; desempilha_elementos_func() }
   ;
 
 PARAMETROS
-  : LVALUE
-  | PARAMETROS ',' LVALUE { $$.v = $1.v + $2.v }
+  : LVALUE { parametros_func.push_back($1.v); }
+  | PARAMETROS ',' LVALUE { parametros_func.push_back($1.v + $3.v); }
   | /* Vazio */
   ;
+
+ELEMENTOS: E ',' ELEMENTOS  { elementos.push_back($1.c); }
+         | E                { elementos.push_back($1.c); }
+         ;
 
 LVALUE
   : tk_id
