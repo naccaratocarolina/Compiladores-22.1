@@ -66,7 +66,7 @@ void desempilha_elementos_array (vector<string>);
 %}
 
 // Tokens
-%token tk_let tk_var tk_const tk_for tk_while tk_if tk_else tk_return tk_float tk_string tk_id tk_func
+%token tk_let tk_var tk_const tk_for tk_while tk_if tk_else tk_float tk_string tk_id tk_func tk_return
 
 // Operadores
 %token tk_ig tk_dif tk_menor_ig tk_maior_ig tk_add_atribui tk_incrementa
@@ -82,7 +82,7 @@ void desempilha_elementos_array (vector<string>);
 %%
 
 S
-  : CMDS { vector<string> v = resolve_enderecos($1.v + "." + funcoes); for (string c : v) { cout << c << " "; } cout << "." << endl; }
+  : { cria_escopo(); } CMDS { vector<string> v = resolve_enderecos($2.v); for (string c : v) { cout << c << " "; } cout << "." << endl; encerra_escopo(); }
   ;
 
 CMDS 
@@ -95,8 +95,7 @@ CMD
   | FOR_CMD
   | WHILE_CMD
   | IF_CMD
-  | DECLARACAO_CMD
-  | JUMP_CMD
+  | DECLARACAO_CMD 
   ;
 
 EXPRESSAO_CMD
@@ -121,7 +120,6 @@ DECLARACAO_VARIAVEL
   | LVALUE '=' EXPRESSAO { $$.v = $1.v + "&" + $1.v + $3.v + "=" + "^"; }
   ;
 
-
 ESPECIFICADOR_TIPO
   : tk_let { $$.v = $1.v; }
   | tk_var { $$.v = $1.v; }
@@ -143,17 +141,12 @@ IF_CMD
   | tk_if '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string end_if = gera_label("end_if"); $$.v = $3.v + "!" + end_if + "?" + $5.v + (":" + end_if); }
   ;
 
-JUMP_CMD
-  : tk_return { $$.v = vetor + "'&retorno'" + "@" + "~"; }
-  | tk_return EXPRESSAO_CMD { $$.v = vetor + $2.v + "'&retorno'" + "@" + "~"; }
-  ;
-
 EXPRESSAO_ATRIBUICAO
   : EXPRESSAO_IGUALDADE
-  | LVALUE '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "="; verifica_declaracao_duplicada($1.v[0]); }
-  | LVALUEPROP '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; verifica_declaracao_duplicada($1.v[0]); }
-  | LVALUE tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "@" + $3.v + "+" + "="; verifica_declaracao_duplicada($1.v[0]); }
-  | LVALUEPROP tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "[@]" + $3.v + "+" + "[=]"; verifica_declaracao_duplicada($1.v[0]); }
+  | LVALUE '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "="; verifica_variavel_nao_declarada($1.v[0]); }
+  | LVALUEPROP '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; verifica_variavel_nao_declarada($1.v[0]); }
+  | LVALUE tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "@" + $3.v + "+" + "="; verifica_variavel_nao_declarada($1.v[0]); }
+  | LVALUEPROP tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "[@]" + $3.v + "+" + "[=]"; verifica_variavel_nao_declarada($1.v[0]); }
   ;
 
 EXPRESSAO_IGUALDADE
@@ -196,22 +189,11 @@ EXPRESSAO_POSFIXA
 EXPRESSAO_PRIMARIA
   : tk_float { $$.v = $1.v; }
   | tk_string { $$.v = $1.v; }
-  | LVALUE { $$.v = $1.v + "@"; verifica_declaracao_duplicada($1.v[0]); }
-  | LVALUEPROP { $$.v = $1.v + "[@]"; verifica_declaracao_duplicada($1.v[0]); }
+  | LVALUE { $$.v = $1.v + "@"; verifica_variavel_nao_declarada($1.v[0]); }
+  | LVALUEPROP { $$.v = $1.v + "[@]"; verifica_variavel_nao_declarada($1.v[0]); }
   | '(' EXPRESSAO ')' { $$ = $2; }
   | OBJETO_LITERAL
   | ARRAY_LITERAL
-  | DECLARACAO_FUNCAO
-  ;
-
-DECLARACAO_FUNCAO
-  : tk_func LVALUE '(' PARAMETROS ')' ESCOPO
-  ;
-
-PARAMETROS
-  : LVALUE 
-  | LVALUE ',' PARAMETROS 
-  | /* Vazio */
   ;
 
 LVALUE
@@ -257,13 +239,13 @@ ARRAY_ELEMENTOS
   ;
 
 ESCOPO
-  : '{' CMDS '}' TERMINADOR { $$.v = $2.v; }
+  : '{' { cria_escopo(); } CMDS '}' TERMINADOR { $$.v = $3.v; encerra_escopo(); }
   | CMD { $$.v = $1.v; }
   ;
 
 TERMINADOR
   : ';' 
-  | /* Vazio */
+  | 
   ;
 
 %%
@@ -288,7 +270,7 @@ void declara_variavel (string tipo, string variavel) {
 }
 
 void verifica_declaracao_duplicada (string variavel) {
-  for (int i=0; i<ultimo_escopo; i++) {
+  for (int i=1; i<=ultimo_escopo; i++) {
   int cont = 0;
     for (int j=0; j<variaveis_declaradas.size(); j++) {
       if (variaveis_declaradas[j].variavel == variavel &&
@@ -304,7 +286,7 @@ void verifica_declaracao_duplicada (string variavel) {
 }
 
 void verifica_variavel_nao_declarada (string variavel) {
-  for (int i=0; i<ultimo_escopo; i++) {
+  for (int i=1; i<=ultimo_escopo; i++) {
     int cont = 0;
     for (int j=0; j<variaveis_declaradas.size(); j++) {
       if (variaveis_declaradas[j].variavel == variavel &&
@@ -314,6 +296,7 @@ void verifica_variavel_nao_declarada (string variavel) {
     }
     if (cont == 0) {
       cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
+      cout << "Escopo: " << i << endl;
       exit(1);
     }
   }
