@@ -32,6 +32,7 @@ void verifica_var_nao_declarada (string);
 void verifica_var_declarada (string);
 void imprime_msg_erro (string, bool);
 void desempilha_elementos_array (vector<string>);
+void desempilha_elementos_func (string, vector<string>);
 
 // Declaracao de variaveis auxiliares
 extern int yylineno;
@@ -39,7 +40,8 @@ vector<string> vetor;
 vector<vector<string>> array_elementos;
 map<string, int> variaveis_declaradas; // map <nome da variavel, linha em que ela foi declarada>
 vector<string> funcoes;
-vector<string> parametros_func;
+vector<vector<string>> parametros_func;
+int cont_parametros = 0;
 
 %}
 
@@ -176,18 +178,14 @@ EXPRESSAO_PRIMARIA
   ;
 
 DECLARACAO_FUNCAO
-  : tk_func LVALUE '(' PARAMETROS ')' ESCOPO { string comeco_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + comeco_func + "[=]" + "^"; desempilha_elementos_func() }
+  : tk_func LVALUE '(' PARAMETROS ')' ESCOPO { string comeco_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + comeco_func + "[=]" + "^"; desempilha_elementos_func(comeco_func, $6.v); }
   ;
 
 PARAMETROS
-  : LVALUE { parametros_func.push_back($1.v); }
-  | PARAMETROS ',' LVALUE { parametros_func.push_back($1.v + $3.v); }
+  : LVALUE { parametros_func.push_back($1.v); cont_parametros++; }
+  | LVALUE ',' PARAMETROS { $1.v.insert($1.v.end(), $3.v.begin(), $3.v.end()); parametros_func.push_back($1.v); cont_parametros++; }
   | /* Vazio */
   ;
-
-ELEMENTOS: E ',' ELEMENTOS  { elementos.push_back($1.c); }
-         | E                { elementos.push_back($1.c); }
-         ;
 
 LVALUE
   : tk_id
@@ -238,6 +236,7 @@ ESCOPO
 
 TERMINADOR
   : ';' 
+  | ';'';'
   | /* Vazio */
   ;
 
@@ -270,6 +269,23 @@ void desempilha_elementos_array (vector<string> v) {
   for (int i=0; i<array_elementos.size(); i++) { 
     v = v + to_string(i) + array_elementos.back() + "[<=]"; 
     array_elementos.pop_back();
+  }
+}
+
+void desempilha_elementos_func (string label, vector<string> bloco) {
+  // Multiplos parametros
+  if (cont_parametros > 0) {
+    vector<string> aux;
+    // Processa parametros
+    for (int i=0; i<parametros_func.size(); i++) {
+      aux = aux + parametros_func.back() + "&" + parametros_func.back() + "arguments" + "@" + to_string(i) + "[@]" + "=" + "^";
+      parametros_func.pop_back();
+    }
+    funcoes = funcoes + (":" + label) + aux + bloco + "undefined" + "@" + "'&retorno'" + "@" + "~";
+  } 
+  // Funcao sem parametros
+  else if (cont_parametros == 0) {
+    funcoes = funcoes + (":" + label) + bloco + "undefined" + "@" + "'&retorno'" + "@" + "~";
   }
 }
 
