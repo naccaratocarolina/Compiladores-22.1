@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <queue>
 
 using namespace std;
 
@@ -14,39 +15,58 @@ struct Atributos {
 
 #define YYSTYPE Atributos
 
-// Declaracao das funcoes
+// Funcoes default e tratamento de erro
 extern int yylex (void);
 int yyparse (void);
 void yyerror (const char *);
+void imprime_msg_erro (string, bool);
 
+// Overload de operadores
 vector<string> operator+ (vector<string>, vector<string>);
 vector<string> operator+ (vector<string>, string);
 vector<string> operator+ (string, vector<string>);
 vector<string> concatena(vector<string>, vector<string>);
 
+// Variaveis Globais
+extern int yylineno;
+vector<string> vetor;
+
+// Label e endereco
 string gera_label (string);
 vector<string> resolve_enderecos (vector<string>);
 
-void registra_var_declarada (string);
-void verifica_var_nao_declarada (string);
-void verifica_var_declarada (string);
-void imprime_msg_erro (string, bool);
-void desempilha_elementos_array (vector<string>);
-void desempilha_elementos_func (string, vector<string>);
+// Variaveis
+typedef struct {
+  string variavel;
+  string tipo;
+  int linha;
+  int escopo;
+} Variavel;
+vector<Variavel> variaveis_declaradas;
 
-// Declaracao de variaveis auxiliares
-extern int yylineno;
-vector<string> vetor;
-vector<vector<string>> array_elementos;
-map<string, int> variaveis_declaradas; // map <nome da variavel, linha em que ela foi declarada>
+queue<int> escopo;
+int ultimo_escopo = 0; // quant de elementos em escopo
+
+void cria_escopo (void);
+void encerra_escopo (void);
+void declara_variavel (string, string);
+void verifica_declaracao_duplicada (string);
+void verifica_variavel_nao_declarada (string);
+
+// Func
 vector<string> funcoes;
 vector<vector<string>> parametros_func;
 int cont_parametros = 0;
+void desempilha_elementos_func (string, vector<string>);
+
+// Array
+vector<vector<string>> array_elementos;
+void desempilha_elementos_array (vector<string>);
 
 %}
 
 // Tokens
-%token tk_let tk_for tk_while tk_if tk_else tk_return tk_float tk_string tk_id tk_func tk_return
+%token tk_let tk_var tk_const tk_for tk_while tk_if tk_else tk_return tk_float tk_string tk_id tk_func
 
 // Operadores
 %token tk_ig tk_dif tk_menor_ig tk_maior_ig tk_add_atribui tk_incrementa
@@ -88,7 +108,7 @@ EXPRESSAO
   ;
 
 DECLARACAO_CMD
-  : tk_let DECLARACAO ';' { $$.v = $2.v; }
+  : ESPECIFICADOR_TIPO DECLARACAO ';' { $$.v = $2.v; verifica_declaracao_duplicada($2.v[0]); declara_variavel($1.v[0], $2.v[0]); }
   ;
 
 DECLARACAO
@@ -97,8 +117,15 @@ DECLARACAO
   ;
 
 DECLARACAO_VARIAVEL
-  : LVALUE { $$.v = $1.v + "&"; verifica_var_declarada($1.v[0]); registra_var_declarada($1.v[0]); }
-  | LVALUE '=' EXPRESSAO { $$.v = $1.v + "&" + $1.v + $3.v + "=" + "^"; verifica_var_declarada($1.v[0]); registra_var_declarada($1.v[0]); }
+  : LVALUE { $$.v = $1.v + "&"; }
+  | LVALUE '=' EXPRESSAO { $$.v = $1.v + "&" + $1.v + $3.v + "=" + "^"; }
+  ;
+
+
+ESPECIFICADOR_TIPO
+  : tk_let { $$.v = $1.v; }
+  | tk_var { $$.v = $1.v; }
+  | tk_const { $$.v = $1.v; }
   ;
 
 FOR_CMD
@@ -123,10 +150,10 @@ JUMP_CMD
 
 EXPRESSAO_ATRIBUICAO
   : EXPRESSAO_IGUALDADE
-  | LVALUE '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "="; verifica_var_nao_declarada($1.v[0]); }
-  | LVALUEPROP '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; verifica_var_nao_declarada($1.v[0]); }
-  | LVALUE tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "@" + $3.v + "+" + "="; verifica_var_nao_declarada($1.v[0]); }
-  | LVALUEPROP tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "[@]" + $3.v + "+" + "[=]"; verifica_var_nao_declarada($1.v[0]); }
+  | LVALUE '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "="; verifica_declaracao_duplicada($1.v[0]); }
+  | LVALUEPROP '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; verifica_declaracao_duplicada($1.v[0]); }
+  | LVALUE tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "@" + $3.v + "+" + "="; verifica_declaracao_duplicada($1.v[0]); }
+  | LVALUEPROP tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "[@]" + $3.v + "+" + "[=]"; verifica_declaracao_duplicada($1.v[0]); }
   ;
 
 EXPRESSAO_IGUALDADE
@@ -169,8 +196,8 @@ EXPRESSAO_POSFIXA
 EXPRESSAO_PRIMARIA
   : tk_float { $$.v = $1.v; }
   | tk_string { $$.v = $1.v; }
-  | LVALUE { $$.v = $1.v + "@"; verifica_var_nao_declarada($1.v[0]); }
-  | LVALUEPROP { $$.v = $1.v + "[@]"; verifica_var_nao_declarada($1.v[0]); }
+  | LVALUE { $$.v = $1.v + "@"; verifica_declaracao_duplicada($1.v[0]); }
+  | LVALUEPROP { $$.v = $1.v + "[@]"; verifica_declaracao_duplicada($1.v[0]); }
   | '(' EXPRESSAO ')' { $$ = $2; }
   | OBJETO_LITERAL
   | ARRAY_LITERAL
@@ -178,12 +205,12 @@ EXPRESSAO_PRIMARIA
   ;
 
 DECLARACAO_FUNCAO
-  : tk_func LVALUE '(' PARAMETROS ')' ESCOPO { string comeco_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + comeco_func + "[=]" + "^"; desempilha_elementos_func(comeco_func, $6.v); }
+  : tk_func LVALUE '(' PARAMETROS ')' ESCOPO
   ;
 
 PARAMETROS
-  : LVALUE { parametros_func.push_back($1.v); cont_parametros++; }
-  | LVALUE ',' PARAMETROS { $1.v.insert($1.v.end(), $3.v.begin(), $3.v.end()); parametros_func.push_back($1.v); cont_parametros++; }
+  : LVALUE 
+  | LVALUE ',' PARAMETROS 
   | /* Vazio */
   ;
 
@@ -236,7 +263,6 @@ ESCOPO
 
 TERMINADOR
   : ';' 
-  | ';'';'
   | /* Vazio */
   ;
 
@@ -244,48 +270,59 @@ TERMINADOR
 
 #include "lex.yy.c"
 
-void registra_var_declarada (string variavel) {
-  variaveis_declaradas[variavel] = yylineno;
+void cria_escopo () {
+  escopo.push(++ultimo_escopo); // insere no final
 }
 
-void verifica_var_nao_declarada (string variavel) {
-  if (variaveis_declaradas.count(variavel) == 0) imprime_msg_erro(variavel, true);
+void encerra_escopo () {
+  escopo.pop(); ultimo_escopo--; // remove do comeco
 }
 
-void verifica_var_declarada (string variavel) {
-  if (variaveis_declaradas.count(variavel) > 0) imprime_msg_erro(variavel, false);
+void declara_variavel (string tipo, string variavel) {
+  Variavel var;
+  var.variavel = variavel;
+  var.tipo = tipo;
+  var.linha = yylineno;
+  var.escopo = ultimo_escopo;
+  variaveis_declaradas.push_back(var);
 }
 
-void imprime_msg_erro (string variavel, bool tipo) {
-  if (tipo) {
-    cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
-  } else {
-    cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[variavel] << "." << endl;
+void verifica_declaracao_duplicada (string variavel) {
+  for (int i=0; i<ultimo_escopo; i++) {
+  int cont = 0;
+    for (int j=0; j<variaveis_declaradas.size(); j++) {
+      if (variaveis_declaradas[j].variavel == variavel &&
+        variaveis_declaradas[j].escopo == i) {
+        cont++;
+        if (cont > 0) {
+          cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[j].linha << "." << endl;
+          exit(1);
+        }
+      }
+    }
   }
-  exit(1);
+}
+
+void verifica_variavel_nao_declarada (string variavel) {
+  for (int i=0; i<ultimo_escopo; i++) {
+    int cont = 0;
+    for (int j=0; j<variaveis_declaradas.size(); j++) {
+      if (variaveis_declaradas[j].variavel == variavel &&
+        variaveis_declaradas[j].escopo == i) {
+        cont++;
+      }
+    }
+    if (cont == 0) {
+      cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
+      exit(1);
+    }
+  }
 }
 
 void desempilha_elementos_array (vector<string> v) {
   for (int i=0; i<array_elementos.size(); i++) { 
     v = v + to_string(i) + array_elementos.back() + "[<=]"; 
     array_elementos.pop_back();
-  }
-}
-
-void desempilha_elementos_func (string label, vector<string> bloco) {
-  // Multiplos parametros
-  if (cont_parametros > 0) {
-    vector<string> aux;
-    // Processa parametros
-    for (int i=0; i<parametros_func.size(); i++) {
-      aux = aux + parametros_func.back() + "&" + parametros_func.back() + "arguments" + "@" + to_string(i) + "[@]" + "=" + "^";
-      parametros_func.pop_back();
-    }
-    funcoes = funcoes + (":" + label) + aux + bloco + "undefined" + "@" + "'&retorno'" + "@" + "~";
-  } 
-  // Funcao sem parametros
-  else if (cont_parametros == 0) {
-    funcoes = funcoes + (":" + label) + bloco + "undefined" + "@" + "'&retorno'" + "@" + "~";
   }
 }
 
