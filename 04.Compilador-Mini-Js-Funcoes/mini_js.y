@@ -138,7 +138,7 @@ ESPECIFICADOR_TIPO
   ;
 
 FUNCAO_CMD 
-  : tk_func LVALUE { dentro_escopo_func = true; } '(' PARAMETROS ')' CMD { verifica_declaracao_duplicada($2.v[0]); declara_func($2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v); dentro_escopo_func = false; }
+  : tk_func LVALUE { dentro_escopo_func = true; } '(' PARAMETROS ')' { dentro_escopo_func = false; } ESCOPO_FUNC { verifica_declaracao_duplicada($2.v[0]); declara_func($2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $8.v); dentro_escopo_func = false; }
   ;
 
 
@@ -270,7 +270,11 @@ FUNCAO_PARAMETROS
   ;
 
 ESCOPO
-  : '{' { cria_escopo(); if (!dentro_escopo_func) { $1.v = vetor + "<{"; } else { $1.v = vetor; } } CMDS '}' { if (!dentro_escopo_func) { $$.v = $1.v + $3.v + "}>"; } else { $$.v = $1.v + $3.v; } encerra_escopo(); }
+  : '{' { cria_escopo(); $1.v = vetor + "<{"; } CMDS '}' { $$.v = $1.v + $3.v + "}>"; encerra_escopo(); }
+  ; 
+
+ESCOPO_FUNC
+  : '{' { cria_escopo(); } CMDS '}' { $$.v = vetor + $3.v; encerra_escopo(); }
   ; 
 
 FIM_CMD
