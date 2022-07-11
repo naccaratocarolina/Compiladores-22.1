@@ -60,7 +60,6 @@ int quant_params = 0;
 vector<string> funcoes;
 void declara_func (string);
 void declara_param(string);
-int descobre_quant_params (string);
 vector<string> parametros_a_serem_declarados;
 void desempilha_elementos_func (string, vector<string>);
 bool dentro_escopo_func = false;
@@ -104,9 +103,9 @@ CMD
   | WHILE_CMD
   | IF_CMD
   | DECLARACAO_CMD 
-  | ASM_CMD
   | FUNCAO_CMD
   | JUMP_CMD
+  | ASM_CMD
   | ESCOPO
   ;
 
@@ -158,8 +157,8 @@ ASM_CMD
   ;
 
 FOR_CMD
-  : tk_for '(' DECLARACAO_CMD EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' CMD { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
-  | tk_for '(' EXPRESSAO_CMD EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' CMD { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
+  : tk_for '(' DECLARACAO_CMD ';' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' CMD { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $5.v + "!" + end_for + "?" + $9.v + $7.v + "^" + start_for + "#" + (":" + end_for); }
+  | tk_for '(' EXPRESSAO_CMD ';' EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' CMD { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $5.v + "!" + end_for + "?" + $9.v + $7.v + "^" + start_for + "#" + (":" + end_for); }
   ;
 
 WHILE_CMD
@@ -168,7 +167,7 @@ WHILE_CMD
 
 IF_CMD
   : tk_if '(' EXPRESSAO_ATRIBUICAO ')' CMD tk_else CMD { string else_if = gera_label("else_if"); string continue_if = gera_label("continue_if"); $$.v = $3.v + "!" + else_if + "?" + $5.v + continue_if + "#" + (":" + else_if) + $7.v + (":" + continue_if); }
-  | tk_if '(' EXPRESSAO_ATRIBUICAO ')' CMD { string end_if = gera_label("end_if"); $$.v = $3.v + "!" + end_if + "?" + $5.v + (":" + end_if); }
+  | tk_if '(' EXPRESSAO_ATRIBUICAO ')' CMD { string end_if = gera_label("end_if"); $$.v = vetor + (":" + end_if) + $3.v + "!" + end_if + "?" + $5.v + end_if + "#" + (":" + end_if); }
   ;
 
 EXPRESSAO_ATRIBUICAO
@@ -208,6 +207,7 @@ EXPRESSAO_MULTIPLICATIVA
 
 EXPRESSAO_UNARIA
   : EXPRESSAO_POSFIXA
+  | '-' tk_float { $$.v = vetor + "0" + $2.v + "-"; }
   ;
 
 EXPRESSAO_POSFIXA
@@ -220,7 +220,6 @@ EXPRESSAO_PRIMARIA
   | tk_string { $$.v = $1.v; }
   | tk_true { $$.v = $1.v; }
   | tk_false { $$.v = $1.v; }
-  | LVALUE tk_asm { $$.v = $2.v; }
   | LVALUE { $$.v = $1.v + "@"; if (!dentro_return_func) { verifica_variavel_nao_declarada($1.v[0]); } }
   | LVALUEPROP { $$.v = $1.v + "[@]"; if (!dentro_return_func) { verifica_variavel_nao_declarada($1.v[0]); } }
   | '(' EXPRESSAO ')' { $$ = $2; }
@@ -261,7 +260,7 @@ ARRAY_ELEMENTOS
 
 FUNCAO_LITERAL
   : LVALUE '(' FUNCAO_PARAMETROS ')' { $$.v = $3.v + to_string(quant_params) + $1.v + "@" + "$"; quant_params = 0; }
-  | LVALUEPROP '(' FUNCAO_PARAMETROS ')' { int quant_params = descobre_quant_params($1.v[0]); $$.v = $3.v + to_string(quant_params) + $1.v + "[@]" + "$"; quant_params = 0; }
+  | LVALUEPROP '(' FUNCAO_PARAMETROS ')' { $$.v = $3.v + to_string(quant_params) + $1.v + "[@]" + "$"; quant_params = 0; }
   ;
 
 FUNCAO_PARAMETROS
@@ -323,16 +322,6 @@ void declara_param(string parametro) {
   variaveis_declaradas.push_back(param);
 }
 
-int descobre_quant_params (string label) {
-  for (int i=0; i<variaveis_declaradas.size(); i++) {
-    if (variaveis_declaradas[i].variavel == label &&
-        variaveis_declaradas[i].tipo == "func") {
-          return variaveis_declaradas[i].quant_params;
-        }
-  }
-  return 0;
-}
-
 void verifica_declaracao_duplicada (string variavel) {
   for (int i=1; i<=ultimo_escopo; i++) {
   int cont = 0;
@@ -351,7 +340,7 @@ void verifica_declaracao_duplicada (string variavel) {
 }
 
 void verifica_variavel_nao_declarada (string variavel) {
-  for (int i=1; i<=ultimo_escopo; i++) {
+  for (int i=0; i<ultimo_escopo; i++) {
     int cont = 0;
     for (int j=0; j<variaveis_declaradas.size(); j++) {
       if (variaveis_declaradas[j].variavel == variavel &&
