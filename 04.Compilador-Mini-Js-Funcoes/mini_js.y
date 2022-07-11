@@ -35,12 +35,13 @@ vector<string> vetor;
 string gera_label (string);
 vector<string> resolve_enderecos (vector<string>);
 
-// Variaveis
+// Variaveis, funcoes e parametros
 typedef struct {
   string variavel;
   string tipo;
   int linha;
   int escopo;
+  int quant_params = 0;
 } Variavel;
 vector<string> variaveis_a_serem_declaradas;
 vector<Variavel> variaveis_declaradas;
@@ -51,15 +52,19 @@ int ultimo_escopo = 0; // quant de elementos em escopo
 void cria_escopo (void);
 void encerra_escopo (void);
 void declara_variavel (string, string);
-void declara_func (string);
 void verifica_declaracao_duplicada (string);
 void verifica_variavel_nao_declarada (string);
+int quant_params = 0;
 
 // Func
 vector<string> funcoes;
+void declara_func (string);
+void declara_param(string);
+int descobre_quant_params (string);
 vector<string> parametros_a_serem_declarados;
 void desempilha_elementos_func (string, vector<string>);
-bool declarando_parametros = false;
+bool dentro_escopo_func = false;
+bool dentro_return_func = false;
 
 // Array
 vector<vector<string>> array_elementos;
@@ -77,7 +82,7 @@ void desempilha_elementos_array (vector<string>);
 %left '+' '-'
 %left '*' '/' '%'
 %right '=' tk_add_atribui tk_incrementa
-%nonassoc ';'
+%nonassoc ';' '(' '[' ']'
 
 // Start indica o símbolo inicial da gramática
 %start S
@@ -89,8 +94,8 @@ S
   ;
 
 CMDS 
-  : CMD
-  | CMDS CMD { $$.v = $1.v + $2.v; }
+  : CMD FIM_CMD
+  | CMDS CMD FIM_CMD { $$.v = $1.v + $2.v; }
   ;
 
 CMD
@@ -99,11 +104,14 @@ CMD
   | WHILE_CMD
   | IF_CMD
   | DECLARACAO_CMD 
+  | ASM_CMD
   | FUNCAO_CMD
+  | JUMP_CMD
+  | ESCOPO
   ;
 
 EXPRESSAO_CMD
-  : EXPRESSAO TERMINADOR { $$.v = $1.v + "^"; }
+  : EXPRESSAO { $$.v = $1.v + "^"; }
   ;
 
 EXPRESSAO
@@ -111,7 +119,7 @@ EXPRESSAO
   ;
 
 DECLARACAO_CMD
-  : ESPECIFICADOR_TIPO DECLARACAO TERMINADOR { $$.v = $2.v; for (string var : variaveis_a_serem_declaradas) { verifica_declaracao_duplicada(var); declara_variavel($1.v[0], var); variaveis_a_serem_declaradas.pop_back(); } }
+  : ESPECIFICADOR_TIPO DECLARACAO { $$.v = $2.v; for (string var : variaveis_a_serem_declaradas) { verifica_declaracao_duplicada(var); declara_variavel($1.v[0], var); variaveis_a_serem_declaradas.pop_back(); } }
   ;
 
 DECLARACAO
@@ -131,34 +139,43 @@ ESPECIFICADOR_TIPO
   ;
 
 FUNCAO_CMD 
-  : tk_func LVALUE { declarando_parametros = true; } '(' PARAMETROS ')' ESCOPO { verifica_declaracao_duplicada($2.v[0]); declara_func($2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v); declarando_parametros = false; }
+  : tk_func LVALUE { dentro_escopo_func = true; } '(' PARAMETROS ')' CMD { verifica_declaracao_duplicada($2.v[0]); declara_func($2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v); dentro_escopo_func = false; }
   ;
 
+
 PARAMETROS
-  : EXPRESSAO { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); } }
-  | EXPRESSAO ',' PARAMETROS { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); } }
+  : LVALUE { if (dentro_escopo_func) { parametros_a_serem_declarados.push_back($1.v[0]); declara_param($1.v[0]); } }
+  | LVALUE ',' PARAMETROS { if (dentro_escopo_func) { parametros_a_serem_declarados.push_back($1.v[0]); declara_variavel("param", $1.v[0]); } }
   |
   ;
 
+JUMP_CMD
+  : tk_return { dentro_return_func = true; } EXPRESSAO { dentro_return_func = false; $$.v = vetor + $3.v + "'&retorno'" + "@" + "~"; }
+  ;
+
+ASM_CMD
+  : EXPRESSAO tk_asm { $$.v = $1.v + $2.v + "^"; }
+  ;
+
 FOR_CMD
-  : tk_for '(' DECLARACAO_CMD EXPRESSAO_ATRIBUICAO TERMINADOR EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
-  | tk_for '(' EXPRESSAO_CMD EXPRESSAO_ATRIBUICAO TERMINADOR EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
+  : tk_for '(' DECLARACAO_CMD EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' CMD { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
+  | tk_for '(' EXPRESSAO_CMD EXPRESSAO_ATRIBUICAO ';' EXPRESSAO_ATRIBUICAO ')' CMD { string start_for = gera_label("start_for"); string end_for = gera_label("end_for");  $$.v = $3.v + (":" + start_for) + $4.v + "!" + end_for + "?" + $8.v + $6.v + "^" + start_for + "#" + (":" + end_for); }
   ;
 
 WHILE_CMD
-  : tk_while '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string start_while = gera_label("start_while"); string end_while = gera_label("end_while"); $$.v = vetor + (":" + start_while) + $3.v + "!" + end_while + "?" + $5.v + start_while + "#" + (":" + end_while); }
+  : tk_while '(' EXPRESSAO_ATRIBUICAO ')' CMD { string start_while = gera_label("start_while"); string end_while = gera_label("end_while"); $$.v = vetor + (":" + start_while) + $3.v + "!" + end_while + "?" + $5.v + start_while + "#" + (":" + end_while); }
   ;
 
 IF_CMD
-  : tk_if '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO tk_else ESCOPO { string else_if = gera_label("else_if"); string continue_if = gera_label("continue_if"); $$.v = $3.v + "!" + else_if + "?" + $5.v + continue_if + "#" + (":" + else_if) + $7.v + (":" + continue_if); }
-  | tk_if '(' EXPRESSAO_ATRIBUICAO ')' ESCOPO { string end_if = gera_label("end_if"); $$.v = $3.v + "!" + end_if + "?" + $5.v + (":" + end_if); }
+  : tk_if '(' EXPRESSAO_ATRIBUICAO ')' CMD tk_else CMD { string else_if = gera_label("else_if"); string continue_if = gera_label("continue_if"); $$.v = $3.v + "!" + else_if + "?" + $5.v + continue_if + "#" + (":" + else_if) + $7.v + (":" + continue_if); }
+  | tk_if '(' EXPRESSAO_ATRIBUICAO ')' CMD { string end_if = gera_label("end_if"); $$.v = $3.v + "!" + end_if + "?" + $5.v + (":" + end_if); }
   ;
 
 EXPRESSAO_ATRIBUICAO
   : EXPRESSAO_IGUALDADE
   | LVALUE '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "="; verifica_variavel_nao_declarada($1.v[0]); }
   | LVALUEPROP '=' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[=]"; verifica_variavel_nao_declarada($1.v[0]); }
-  | LVALUE tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "@" + $3.v + "+" + "="; verifica_variavel_nao_declarada($1.v[0]);verifica_variavel_nao_declarada($1.v[0]); }
+  | LVALUE tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "@" + $3.v + "+" + "="; verifica_variavel_nao_declarada($1.v[0]); verifica_variavel_nao_declarada($1.v[0]); }
   | LVALUEPROP tk_add_atribui EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $1.v + "[@]" + $3.v + "+" + "[=]"; verifica_variavel_nao_declarada($1.v[0]); }
   ;
 
@@ -191,7 +208,6 @@ EXPRESSAO_MULTIPLICATIVA
 
 EXPRESSAO_UNARIA
   : EXPRESSAO_POSFIXA
-  | '-' tk_float { $$.v = vetor + "0" + $2.v + "-"; }
   ;
 
 EXPRESSAO_POSFIXA
@@ -204,8 +220,9 @@ EXPRESSAO_PRIMARIA
   | tk_string { $$.v = $1.v; }
   | tk_true { $$.v = $1.v; }
   | tk_false { $$.v = $1.v; }
-  | LVALUE { $$.v = $1.v + "@"; verifica_variavel_nao_declarada($1.v[0]); }
-  | LVALUEPROP { $$.v = $1.v + "[@]"; verifica_variavel_nao_declarada($1.v[0]); }
+  | LVALUE tk_asm { $$.v = $2.v; }
+  | LVALUE { $$.v = $1.v + "@"; if (!dentro_return_func) { verifica_variavel_nao_declarada($1.v[0]); } }
+  | LVALUEPROP { $$.v = $1.v + "[@]"; if (!dentro_return_func) { verifica_variavel_nao_declarada($1.v[0]); } }
   | '(' EXPRESSAO ')' { $$ = $2; }
   | OBJETO_LITERAL
   | ARRAY_LITERAL
@@ -230,19 +247,6 @@ LVALUEPROP
 
 OBJETO_LITERAL
   : '{' '}' { $$.v = vetor + "{}"; }
-  | '{' OBJETO_CHAVE_VALOR '}' { $$.v = vetor + "{}" + $2.v; }
-  ;
-
-OBJETO_CHAVE_VALOR
-  : OBJETO_CHAVE ':' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[<=]"; }
-  | OBJETO_CHAVE_VALOR ':' OBJETO_CHAVE ',' EXPRESSAO_ATRIBUICAO { $$.v = $1.v + $3.v + "[<=]" + $5.v; }
-  | OBJETO_CHAVE_VALOR ':'{ $$.v = $1.v + "[<=]"; }
-  ;
-
-OBJETO_CHAVE
-  : tk_string { $$.v = $1.v; }
-  | tk_float { $$.v = $1.v; }
-  | LVALUE { $$.v = $1.v; }
   ;
 
 ARRAY_LITERAL
@@ -256,21 +260,27 @@ ARRAY_ELEMENTOS
   ;
 
 FUNCAO_LITERAL
-  : LVALUEPROP '(' ')' { $$.v = vetor + "0" + $1.v + "[@]" + "$"; }
-  | LVALUE '(' ')' { $$.v = vetor + "0" + $1.v + "@" + "$"; }
-  | LVALUEPROP '(' PARAMETROS ')' { $$.v = $3.v + to_string(parametros_a_serem_declarados.size()) + $1.v + "[@]" + "$"; }
-  | LVALUE '(' PARAMETROS ')' { $$.v = $3.v + to_string(parametros_a_serem_declarados.size()) + $1.v + "@" + "$"; }
+  : LVALUE '(' FUNCAO_PARAMETROS ')' { $$.v = $3.v + to_string(quant_params) + $1.v + "@" + "$"; quant_params = 0; }
+  | LVALUEPROP '(' FUNCAO_PARAMETROS ')' { int quant_params = descobre_quant_params($1.v[0]); $$.v = $3.v + to_string(quant_params) + $1.v + "[@]" + "$"; quant_params = 0; }
+  ;
+
+FUNCAO_PARAMETROS
+  : EXPRESSAO { $$.v = $1.v; quant_params++; }
+  | EXPRESSAO ',' FUNCAO_PARAMETROS { $$.v = $1.v + $3.v; quant_params++; }
+  | { $$.v = vetor; }
   ;
 
 ESCOPO
-  : '{' { cria_escopo(); } CMDS '}' TERMINADOR { $$.v = $3.v; encerra_escopo(); }
-  | CMD { $$.v = $1.v; }
+  : '{' { cria_escopo(); if (!dentro_escopo_func) { $1.v = vetor + "<{"; } else { $1.v = vetor; } } CMDS '}' { if (!dentro_escopo_func) { $$.v = $1.v + $3.v + "}>"; } else { $$.v = $1.v + $3.v; } encerra_escopo(); }
   ; 
+
+FIM_CMD
+  : TERMINADOR FIM_CMD
+  | /* Vazio */
+  ;
 
 TERMINADOR
   : ';'
-  | ';' TERMINADOR
-  | 
   ;
 
 %%
@@ -278,13 +288,10 @@ TERMINADOR
 #include "lex.yy.c"
 
 void cria_escopo () {
-  cout << "Escopo criado!" << endl;
   escopo.push(++ultimo_escopo); // insere no final
-  cout << "Ultimo escopo: " << ultimo_escopo << endl;
 }
 
 void encerra_escopo () {
-  cout << "Escopo removido!" << endl;
   escopo.pop(); ultimo_escopo--; // remove do comeco
 }
 
@@ -295,17 +302,35 @@ void declara_variavel (string tipo, string variavel) {
   var.linha = yylineno;
   var.escopo = ultimo_escopo;
   variaveis_declaradas.push_back(var);
-  cout << "Variavel '" << variavel << "' declarada no escopo " << ultimo_escopo << endl;
 }
 
-void declara_func (string funcao) {
+void declara_func (string label) {
   Variavel func;
-  func.variavel = funcao;
+  func.variavel = label;
   func.tipo = "func";
   func.linha = yylineno;
   func.escopo = ultimo_escopo;
+  func.quant_params = parametros_a_serem_declarados.size();
   variaveis_declaradas.push_back(func);
-  cout << "Funcao '" << funcao << "' declarada no escopo " << ultimo_escopo << endl;
+}
+
+void declara_param(string parametro) {
+  Variavel param;
+  param.variavel = parametro;
+  param.tipo = "param";
+  param.linha = yylineno;
+  param.escopo = ultimo_escopo + 1;
+  variaveis_declaradas.push_back(param);
+}
+
+int descobre_quant_params (string label) {
+  for (int i=0; i<variaveis_declaradas.size(); i++) {
+    if (variaveis_declaradas[i].variavel == label &&
+        variaveis_declaradas[i].tipo == "func") {
+          return variaveis_declaradas[i].quant_params;
+        }
+  }
+  return 0;
 }
 
 void verifica_declaracao_duplicada (string variavel) {
@@ -329,14 +354,14 @@ void verifica_variavel_nao_declarada (string variavel) {
   for (int i=1; i<=ultimo_escopo; i++) {
     int cont = 0;
     for (int j=0; j<variaveis_declaradas.size(); j++) {
-      if (variaveis_declaradas[j].variavel == variavel) {
+      if (variaveis_declaradas[j].variavel == variavel &&
+          variaveis_declaradas[j].escopo <= ultimo_escopo) {
         cont++;
         break;
       }
     }
-    if (cont == 0 && variaveis_declaradas.size() > 0) {
+    if (cont == 0) {
       cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
-      cout << "Escopo: " << i << endl;
       exit(1);
     }
   }
@@ -360,6 +385,7 @@ void desempilha_elementos_func (string label, vector<string> bloco) {
     vector<string> parametros;
     for (int i=0; i<=parametros_a_serem_declarados.size(); i++) {
       parametros = parametros + parametros_a_serem_declarados.back() + "&" + parametros_a_serem_declarados.back() + "arguments" + "@" + to_string(i) + "[@]" + "=" + "^";
+      // Declara a variavel para ser possivel referenciar dentro do escopo da funcao sem necessidade de declarar
       parametros_a_serem_declarados.pop_back();
     }
     funcoes = funcoes + (":" + label) + parametros + bloco + "undefined" + "@" + "'&retorno'" + "@" + "~";
