@@ -93,20 +93,20 @@ S
   ;
 
 CMDS 
-  : CMD FIM_CMD
-  | CMDS CMD FIM_CMD { $$.v = $1.v + $2.v; }
+  : CMD
+  | CMDS CMD { $$.v = $1.v + $2.v; }
   ;
 
 CMD
-  : EXPRESSAO_CMD
-  | FOR_CMD
-  | WHILE_CMD
-  | IF_CMD
-  | DECLARACAO_CMD 
-  | FUNCAO_CMD
-  | JUMP_CMD
-  | ASM_CMD
-  | ESCOPO
+  : EXPRESSAO_CMD FIM_CMD
+  | FOR_CMD FIM_CMD
+  | WHILE_CMD FIM_CMD
+  | IF_CMD FIM_CMD
+  | DECLARACAO_CMD FIM_CMD
+  | FUNCAO_CMD FIM_CMD
+  | JUMP_CMD FIM_CMD
+  | ASM_CMD FIM_CMD
+  | ESCOPO FIM_CMD
   ;
 
 EXPRESSAO_CMD
@@ -327,36 +327,34 @@ void declara_param(string parametro) {
 }
 
 void verifica_declaracao_duplicada (string variavel) {
-  for (int i=1; i<=ultimo_escopo; i++) {
-  int cont = 0;
-    for (int j=0; j<variaveis_declaradas.size(); j++) {
-      if (variaveis_declaradas[j].variavel == variavel &&
-          variaveis_declaradas[j].escopo == i &&
-          variaveis_declaradas[j].escopo >= ultimo_escopo) {
-        cont++;
-        if (cont > 0) {
-          cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[j].linha << "." << endl;
-          exit(1);
-        }
-      }
+  int cont = 0; // contador de ocorrencias
+  int linha = 0;
+  for (int i=0; i<variaveis_declaradas.size(); i++) {
+    if (variaveis_declaradas[i].variavel == variavel &&
+        variaveis_declaradas[i].escopo >= ultimo_escopo &&
+        variaveis_declaradas[i].tipo != "param") {
+      cont++;
     }
+
+    if (cont > 1) {
+          cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[i].linha << "." << endl;
+        exit(1);
+      }
   }
 }
 
 void verifica_variavel_nao_declarada (string variavel) {
-  for (int i=0; i<ultimo_escopo; i++) {
-    int cont = 0;
-    for (int j=0; j<variaveis_declaradas.size(); j++) {
-      if (variaveis_declaradas[j].variavel == variavel &&
-          variaveis_declaradas[j].escopo <= ultimo_escopo) {
-        cont++;
-        break;
-      }
+  int cont = 0; // contador de ocorrencias
+  for (int i=0; i<variaveis_declaradas.size(); i++) {
+    if (variaveis_declaradas[i].variavel == variavel && 
+      variaveis_declaradas[i].escopo <= ultimo_escopo) {
+      cont++;
     }
-    if (cont == 0) {
-      cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
-      exit(1);
-    }
+  }
+  
+  if (cont == 0) {
+    cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
+        exit(1);
   }
 }
 
