@@ -63,6 +63,7 @@ void declara_param(string);
 vector<string> parametros_a_serem_declarados;
 void desempilha_elementos_func (string, vector<string>);
 bool dentro_escopo_func = false;
+bool declarando_parametros = false;
 bool dentro_return_func = false;
 
 // Array
@@ -138,13 +139,13 @@ ESPECIFICADOR_TIPO
   ;
 
 FUNCAO_CMD 
-  : tk_func LVALUE { dentro_escopo_func = true; } '(' PARAMETROS ')' { dentro_escopo_func = false; } ESCOPO_FUNC { verifica_declaracao_duplicada($2.v[0]); declara_func($2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $8.v); dentro_escopo_func = false; }
+  : tk_func LVALUE { declarando_parametros = true; } '(' PARAMETROS ')' ESCOPO_FUNC { verifica_declaracao_duplicada($2.v[0]); declara_func($2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v);  declarando_parametros = false; }
   ;
 
 
 PARAMETROS
-  : LVALUE { if (dentro_escopo_func) { parametros_a_serem_declarados.push_back($1.v[0]); declara_param($1.v[0]); } }
-  | LVALUE ',' PARAMETROS { if (dentro_escopo_func) { parametros_a_serem_declarados.push_back($1.v[0]); declara_variavel("param", $1.v[0]); } }
+  : LVALUE { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara_param($1.v[0]); } }
+  | LVALUE ',' PARAMETROS { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara_param($1.v[0]); } }
   |
   ;
 
@@ -274,7 +275,7 @@ ESCOPO
   ; 
 
 ESCOPO_FUNC
-  : '{' { cria_escopo(); } CMDS '}' { $$.v = vetor + $3.v; encerra_escopo(); }
+  : '{' { cria_escopo(); dentro_escopo_func = true; } CMDS '}' { $$.v = vetor + $3.v; dentro_escopo_func = false; encerra_escopo(); }
   ; 
 
 FIM_CMD
@@ -328,15 +329,13 @@ void declara_param(string parametro) {
 
 void verifica_declaracao_duplicada (string variavel) {
   int cont = 0; // contador de ocorrencias
-  int linha = 0;
   for (int i=0; i<variaveis_declaradas.size(); i++) {
     if (variaveis_declaradas[i].variavel == variavel &&
-        variaveis_declaradas[i].escopo >= ultimo_escopo &&
-        variaveis_declaradas[i].tipo != "param") {
+        variaveis_declaradas[i].escopo >= ultimo_escopo) {
       cont++;
     }
 
-    if (cont > 1) {
+    if (cont > 1 || dentro_escopo_func && cont == 1) {
           cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[i].linha << "." << endl;
         exit(1);
       }
