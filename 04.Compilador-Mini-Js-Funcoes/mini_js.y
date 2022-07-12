@@ -373,10 +373,11 @@ void desempilha_elementos_func (string label, vector<string> bloco) {
   // Funcao possui parametros (um ou mais)
   else {
     vector<string> parametros;
-    for (int i=0; i<=parametros_a_serem_declarados.size(); i++) {
+    int i=0;
+    for (string p : parametros_a_serem_declarados) {
       parametros = parametros + parametros_a_serem_declarados.back() + "&" + parametros_a_serem_declarados.back() + "arguments" + "@" + to_string(i) + "[@]" + "=" + "^";
-      // Declara a variavel para ser possivel referenciar dentro do escopo da funcao sem necessidade de declarar
       parametros_a_serem_declarados.pop_back();
+      i++;
     }
     funcoes = funcoes + (":" + label) + parametros + bloco + "undefined" + "@" + "'&retorno'" + "@" + "~";
   }
