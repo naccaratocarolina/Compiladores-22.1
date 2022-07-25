@@ -37,7 +37,7 @@ vector<string> resolve_enderecos (vector<string>);
 
 // Variaveis, funcoes e parametros
 typedef struct {
-  string variavel;
+  string nome;
   string tipo;
   int linha;
   int escopo;
@@ -51,15 +51,14 @@ int ultimo_escopo = 0; // quant de elementos em escopo
 
 void cria_escopo (void);
 void encerra_escopo (void);
-void declara_variavel (string, string);
+void declara (string, string);
 void verifica_declaracao_duplicada (string);
 void verifica_variavel_nao_declarada (string);
 int quant_params = 0;
+bool verifica_var_declaracao (string); // retorna true se precisar declarar, false c.c.
 
 // Func
 vector<string> funcoes;
-void declara_func (string);
-void declara_param(string);
 vector<string> parametros_a_serem_declarados;
 void desempilha_elementos_func (string, vector<string>);
 bool dentro_escopo_func = false;
@@ -119,7 +118,7 @@ EXPRESSAO
   ;
 
 DECLARACAO_CMD
-  : ESPECIFICADOR_TIPO DECLARACAO { $$.v = $2.v; for (string var : variaveis_a_serem_declaradas) { verifica_declaracao_duplicada(var); declara_variavel($1.v[0], var); variaveis_a_serem_declaradas.pop_back(); } }
+  : ESPECIFICADOR_TIPO DECLARACAO { $$.v = $2.v; for (string var : variaveis_a_serem_declaradas) { verifica_declaracao_duplicada(var); declara($1.v[0], var); variaveis_a_serem_declaradas.pop_back(); } }
   ;
 
 DECLARACAO
@@ -128,8 +127,8 @@ DECLARACAO
   ;
 
 DECLARACAO_VARIAVEL
-  : LVALUE { $$.v = $1.v + "&"; variaveis_a_serem_declaradas.push_back($1.v[0]); }
-  | LVALUE '=' EXPRESSAO { $$.v = $1.v + "&" + $1.v + $3.v + "=" + "^"; variaveis_a_serem_declaradas.push_back($1.v[0]); }
+  : LVALUE { variaveis_a_serem_declaradas.push_back($1.v[0]); $1.v.push_back("&"); $$ = $1; }
+  | LVALUE '=' EXPRESSAO { variaveis_a_serem_declaradas.push_back($1.v[0]); $1.v.push_back("&"); $1.v.push_back($1.v[0]); $1.v.insert($1.v.end(), $3.v.begin(), $3.v.end()); $1.v.push_back("="); $1.v.push_back("^"); $$ = $1; }
   ;
 
 ESPECIFICADOR_TIPO
@@ -139,13 +138,13 @@ ESPECIFICADOR_TIPO
   ;
 
 FUNCAO_CMD 
-  : tk_func LVALUE { declarando_parametros = true; } '(' PARAMETROS ')' ESCOPO_FUNC { verifica_declaracao_duplicada($2.v[0]); declara_func($2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v);  declarando_parametros = false; }
+  : tk_func LVALUE { declarando_parametros = true; } '(' PARAMETROS ')' ESCOPO_FUNC { verifica_declaracao_duplicada($2.v[0]); declara("func", $2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v);  declarando_parametros = false; }
   ;
 
 
 PARAMETROS
-  : LVALUE { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara_param($1.v[0]); } }
-  | LVALUE ',' PARAMETROS { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara_param($1.v[0]); } }
+  : LVALUE { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara("param", $1.v[0]); } }
+  | LVALUE ',' PARAMETROS { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara("param", $1.v[0]); } }
   |
   ;
 
@@ -231,6 +230,7 @@ EXPRESSAO_PRIMARIA
 
 LVALUE
   : tk_id
+  | '(' tk_id ')' { $$.v = $2.v; }
   ;
 
 PROP
@@ -242,7 +242,7 @@ PROP
 
 LVALUEPROP
   : LVALUE PROP { $$.v = $1.v + "@" + $2.v; }
-  | '(' LVALUE ')' PROP { $$.v = $2.v + "@" + $4.v; }
+  | '(' LVALUE PROP ')' LVALUEPROP { $$.v = $2.v + "@" + $4.v; }
   ;
 
 OBJETO_LITERAL
@@ -299,60 +299,63 @@ void encerra_escopo () {
   escopo.pop(); ultimo_escopo--; // remove do comeco
 }
 
-void declara_variavel (string tipo, string variavel) {
-  Variavel var;
-  var.variavel = variavel;
-  var.tipo = tipo;
-  var.linha = yylineno;
-  var.escopo = ultimo_escopo;
-  variaveis_declaradas.push_back(var);
+bool verifica_var_declaracao (string nome) {
+  int cont = 0;
+  for (int i=0; i<variaveis_declaradas.size(); i++) {
+    if (variaveis_declaradas[i].tipo == "var" && 
+        variaveis_declaradas[i].nome == nome) {
+      cont++;
+    }
+    if (cont > 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
-void declara_func (string label) {
-  Variavel func;
-  func.variavel = label;
-  func.tipo = "func";
-  func.linha = yylineno;
-  func.escopo = ultimo_escopo;
-  func.quant_params = parametros_a_serem_declarados.size();
-  variaveis_declaradas.push_back(func);
+void declara (string tipo, string nome) {
+  Variavel nova;
+  nova.nome = nome;
+  nova.tipo = tipo;
+  nova.linha = yylineno;
+  nova.escopo = ultimo_escopo;
+
+  if (tipo == "func") {
+    nova.quant_params = parametros_a_serem_declarados.size();
+  }
+  if (tipo == "param") {
+    nova.escopo++;
+  }
+
+  variaveis_declaradas.push_back(nova);
 }
 
-void declara_param(string parametro) {
-  Variavel param;
-  param.variavel = parametro;
-  param.tipo = "param";
-  param.linha = yylineno;
-  param.escopo = ultimo_escopo + 1;
-  variaveis_declaradas.push_back(param);
-}
-
-void verifica_declaracao_duplicada (string variavel) {
+void verifica_declaracao_duplicada (string nome) {
   int cont = 0; // contador de ocorrencias
   for (int i=0; i<variaveis_declaradas.size(); i++) {
-    if (variaveis_declaradas[i].variavel == variavel &&
+    if (variaveis_declaradas[i].nome == nome &&
         variaveis_declaradas[i].escopo >= ultimo_escopo) {
       cont++;
     }
 
     if (cont > 1 || dentro_escopo_func && cont == 1) {
-          cout << "Erro: a variável '" << variavel << "' já foi declarada na linha " << variaveis_declaradas[i].linha << "." << endl;
+          cout << "Erro: a variável '" << nome << "' já foi declarada na linha " << variaveis_declaradas[i].linha << "." << endl;
         exit(1);
       }
   }
 }
 
-void verifica_variavel_nao_declarada (string variavel) {
+void verifica_variavel_nao_declarada (string nome) {
   int cont = 0; // contador de ocorrencias
   for (int i=0; i<variaveis_declaradas.size(); i++) {
-    if (variaveis_declaradas[i].variavel == variavel && 
+    if (variaveis_declaradas[i].nome == nome && 
       variaveis_declaradas[i].escopo <= ultimo_escopo) {
       cont++;
     }
   }
   
   if (cont == 0) {
-    cout << "Erro: a variável '" << variavel << "' não foi declarada." << endl;
+    cout << "Erro: a variável '" << nome << "' não foi declarada." << endl;
         exit(1);
   }
 }

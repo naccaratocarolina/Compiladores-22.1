@@ -7,8 +7,8 @@
 
   	// Declaracao das funcoes
   	int retorna(string, int);
-  	string trim (char*);
-  	vector<string> split (string);
+    string remove_ocorrencias (string);
+    vector<string> tokeniza (string);
 %}
 
 %option yylineno
@@ -53,7 +53,7 @@ STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}|{ASPAS_INVERTIDAS}
 "return" 	  { return retorna("return", tk_return); }
 "true"	  	{ return retorna("true", tk_true); }
 "false"	  	{ return retorna("false", tk_false); }
-"asm{".*"}" { yylval.v = split(trim(yytext + 4)); return tk_asm; }
+"asm{".*"}" { yylval.v = tokeniza(yytext + 4); return tk_asm; }
 
 "=="        { return retorna("==", tk_ig); }
 "!="        { return retorna("!=", tk_dif); }
@@ -74,21 +74,27 @@ int retorna (string valor, int tk) {
   return tk;
 }
 
-string trim( char *texto ) {
-  string a = texto;
-  return a.erase(a.size() - 1, a.size());
+string remove_ocorrencias (string lexema) {
+  string res;
+  res.reserve(lexema.size());
+  for (size_t i=0; i<lexema.size(); ++i) {
+    if (lexema[i] != '{' && lexema[i] != '}') {
+      res += lexema[i];
+    }
+  }
+  return res;
 }
 
-vector<string> split( string codigo ) {
+vector<string> tokeniza (string lexema) {
   vector<std::string> tokens;
-  size_t start = 0, end = 0;
-
-  while ((end = codigo.find(" ", start)) != string::npos)
-  {
-      tokens.push_back(codigo.substr(start, end - start));
-      start = end + 1;
+  string codigo = remove_ocorrencias(lexema);
+  size_t ini = 0, fim = 0;
+  
+  while ((fim = codigo.find(" ", ini)) != string::npos) {
+      tokens.push_back(codigo.substr(ini, fim - ini));
+      ini = fim + 1;
   }
 
-  tokens.push_back(codigo.substr(start));
+  tokens.push_back(codigo.substr(ini));
   return tokens;
 }
