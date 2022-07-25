@@ -55,7 +55,7 @@ void declara (string, string);
 void verifica_declaracao_duplicada (string);
 void verifica_variavel_nao_declarada (string);
 int quant_params = 0;
-bool verifica_var_declaracao (string); // retorna true se precisar declarar, false c.c.
+bool verifica_var_declaracao (string, string); // retorna true se precisar declarar, false c.c.
 
 // Func
 vector<string> funcoes;
@@ -118,17 +118,14 @@ EXPRESSAO
   ;
 
 DECLARACAO_CMD
-  : ESPECIFICADOR_TIPO DECLARACAO { $$.v = $2.v; for (string var : variaveis_a_serem_declaradas) { verifica_declaracao_duplicada(var); declara($1.v[0], var); variaveis_a_serem_declaradas.pop_back(); } }
+  : ESPECIFICADOR_TIPO LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); $2.v.push_back($2.v[0]); } $2.v.insert($2.v.end(), $3.v.begin(), $3.v.end()); $2.v.push_back("="); $2.v.push_back("^"); $$.v = $2.v; verifica_declaracao_duplicada($2.v[0]); declara($1.v[0], $2.v[0]); } 
+  | ESPECIFICADOR_TIPO LVALUE ',' LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); } $2.v.push_back($4.v[0]); if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); if ($5.v.size()>0) { $2.v.push_back($2.v[$2.v.size()-2]); $2.v.insert($2.v.end(), $5.v.begin(), $5.v.end()); $2.v.push_back("="); $2.v.push_back("^"); } } $$.v = $2.v; verifica_declaracao_duplicada($2.v[0]); declara($1.v[0], $2.v[0]); verifica_declaracao_duplicada($4.v[0]); declara($1.v[0], $4.v[0]); }
+  | ESPECIFICADOR_TIPO LVALUE ATRIBUICAO_DECLARACAO ',' LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); $2.v.push_back($2.v[0]); } $2.v.insert($2.v.end(), $3.v.begin(), $3.v.end()); $2.v.push_back("="); $2.v.push_back("^"); verifica_declaracao_duplicada($2.v[0]); declara($1.v[0], $2.v[0]); $2.v.push_back($5.v[0]); if (verifica_var_declaracao($1.v[0], $5.v[0])) { $2.v.push_back("&"); $2.v.push_back($5.v[0]); } $2.v.insert($2.v.end(), $6.v.begin(), $6.v.end()); $2.v.push_back("="); $2.v.push_back("^"); $$.v = $2.v; verifica_declaracao_duplicada($5.v[0]); declara($1.v[0], $5.v[0]); }
   ;
 
-DECLARACAO
-  : DECLARACAO_VARIAVEL
-  | DECLARACAO_VARIAVEL ',' DECLARACAO { $$.v = $1.v + $3.v; }
-  ;
-
-DECLARACAO_VARIAVEL
-  : LVALUE { variaveis_a_serem_declaradas.push_back($1.v[0]); $1.v.push_back("&"); $$ = $1; }
-  | LVALUE '=' EXPRESSAO { variaveis_a_serem_declaradas.push_back($1.v[0]); $1.v.push_back("&"); $1.v.push_back($1.v[0]); $1.v.insert($1.v.end(), $3.v.begin(), $3.v.end()); $1.v.push_back("="); $1.v.push_back("^"); $$ = $1; }
+ATRIBUICAO_DECLARACAO
+  : '=' EXPRESSAO { $$.v = $2.v; }
+  | /* Vazio */ { $$.v = vetor; }
   ;
 
 ESPECIFICADOR_TIPO
@@ -140,7 +137,6 @@ ESPECIFICADOR_TIPO
 FUNCAO_CMD 
   : tk_func LVALUE { declarando_parametros = true; } '(' PARAMETROS ')' ESCOPO_FUNC { verifica_declaracao_duplicada($2.v[0]); declara("func", $2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v);  declarando_parametros = false; }
   ;
-
 
 PARAMETROS
   : LVALUE { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara("param", $1.v[0]); } }
@@ -299,7 +295,8 @@ void encerra_escopo () {
   escopo.pop(); ultimo_escopo--; // remove do comeco
 }
 
-bool verifica_var_declaracao (string nome) {
+bool verifica_var_declaracao (string tipo, string nome) {
+  if (tipo != "var") return true;
   int cont = 0;
   for (int i=0; i<variaveis_declaradas.size(); i++) {
     if (variaveis_declaradas[i].tipo == "var" && 
