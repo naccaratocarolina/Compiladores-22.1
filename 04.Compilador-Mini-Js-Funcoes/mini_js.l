@@ -28,8 +28,6 @@ ID {LETRA}({LETRA}|{DIGITO})*
 
 FLOAT {DIGITO}+(\.{DIGITO}+)?([Ee][+-]?{DIGITO}+)?
 
-NEG \-FLOAT
-
 ASPAS_SIMPLES \'([^'\\\n]|(\'\')*|\\(.|\n))*\'
 
 ASPAS_DUPLAS \"([^"\\\n]|(\"\")*|\\(.|\n))*\"
@@ -40,32 +38,32 @@ STRING {ASPAS_SIMPLES}|{ASPAS_DUPLAS}|{ASPAS_INVERTIDAS}
 
 %%
 
-{WS}        {  }
+{WS}          {  }
 
-"let"       { return retorna("let", tk_let); }
-"var"       { return retorna("var", tk_var); }
-"const"     { return retorna("const", tk_const); }
-"for"       { return retorna("for", tk_for); }
-"while"     { return retorna("while", tk_while); }
-"if"        { return retorna("if", tk_if); }
-"else"      { return retorna("else", tk_else); }
-"function" 	{ return retorna("function", tk_func); }
-"return" 	  { return retorna("return", tk_return); }
-"true"	  	{ return retorna("true", tk_true); }
-"false"	  	{ return retorna("false", tk_false); }
-"asm{".*"}" { yylval.v = tokeniza(yytext + 4); return tk_asm; }
+"let"         { return retorna("let", tk_let); }
+"var"         { return retorna("var", tk_var); }
+"const"       { return retorna("const", tk_const); }
+"for"         { return retorna("for", tk_for); }
+"while"       { return retorna("while", tk_while); }
+"if"          { return retorna("if", tk_if); }
+"else"        { return retorna("else", tk_else); }
+"function"    { return retorna("function", tk_func); }
+"return"      { return retorna("return", tk_return); }
+"true"        { return retorna("true", tk_true); }
+"false"       { return retorna("false", tk_false); }
+"asm{".*"}"   { yylval.v = tokeniza(yytext + 4); return tk_asm; }
 
-"=="        { return retorna("==", tk_ig); }
-"!="        { return retorna("!=", tk_dif); }
-"<="        { return retorna("<=", tk_menor_ig);  }
-">="        { return retorna(">=", tk_maior_ig); }
-"+="        { return retorna("+=", tk_add_atribui); }
-"++"        { return retorna("++", tk_incrementa); }
+"=="          { return retorna("==", tk_ig); }
+"!="          { return retorna("!=", tk_dif); }
+"<="          { return retorna("<=", tk_menor_ig);  }
+">="          { return retorna(">=", tk_maior_ig); }
+"+="          { return retorna("+=", tk_add_atribui); }
+"++"          { return retorna("++", tk_incrementa); }
 
-{FLOAT}     { return retorna(yytext, tk_float); }
-{STRING}    { return retorna(yytext, tk_string); }
-{ID}        { return retorna(yytext, tk_id); }
-.           { return retorna(yytext, *yytext); }
+{FLOAT}       { return retorna(yytext, tk_float); }
+{STRING}      { return retorna(yytext, tk_string); }
+{ID}          { return retorna(yytext, tk_id); }
+.             { return retorna(yytext, *yytext); }
 
 %%
 
