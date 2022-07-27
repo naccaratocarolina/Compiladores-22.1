@@ -52,7 +52,7 @@ int ultimo_escopo = 0; // quant de elementos em escopo
 void cria_escopo (void);
 void encerra_escopo (void);
 void declara (string, string);
-void verifica_declaracao_duplicada (string);
+void verifica_declaracao_duplicada (string, string);
 void verifica_variavel_nao_declarada (string);
 int quant_params = 0;
 bool verifica_var_declaracao (string, string); // retorna true se precisar declarar, false c.c.
@@ -64,6 +64,7 @@ void desempilha_elementos_func (string, vector<string>);
 bool dentro_escopo_func = false;
 bool declarando_parametros = false;
 bool dentro_return_func = false;
+string funcao_escopo_atual;
 
 // Array
 vector<vector<string>> array_elementos;
@@ -118,9 +119,9 @@ EXPRESSAO
   ;
 
 DECLARACAO_CMD
-  : ESPECIFICADOR_TIPO LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); $2.v.push_back($2.v[0]); } $2.v.insert($2.v.end(), $3.v.begin(), $3.v.end()); $2.v.push_back("="); $2.v.push_back("^"); $$.v = $2.v; verifica_declaracao_duplicada($2.v[0]); declara($1.v[0], $2.v[0]); } 
-  | ESPECIFICADOR_TIPO LVALUE ',' LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); } $2.v.push_back($4.v[0]); if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); if ($5.v.size()>0) { $2.v.push_back($2.v[$2.v.size()-2]); $2.v.insert($2.v.end(), $5.v.begin(), $5.v.end()); $2.v.push_back("="); $2.v.push_back("^"); } } $$.v = $2.v; verifica_declaracao_duplicada($2.v[0]); declara($1.v[0], $2.v[0]); verifica_declaracao_duplicada($4.v[0]); declara($1.v[0], $4.v[0]); }
-  | ESPECIFICADOR_TIPO LVALUE ATRIBUICAO_DECLARACAO ',' LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); $2.v.push_back($2.v[0]); } $2.v.insert($2.v.end(), $3.v.begin(), $3.v.end()); $2.v.push_back("="); $2.v.push_back("^"); verifica_declaracao_duplicada($2.v[0]); declara($1.v[0], $2.v[0]); $2.v.push_back($5.v[0]); if (verifica_var_declaracao($1.v[0], $5.v[0])) { $2.v.push_back("&"); $2.v.push_back($5.v[0]); } $2.v.insert($2.v.end(), $6.v.begin(), $6.v.end()); $2.v.push_back("="); $2.v.push_back("^"); $$.v = $2.v; verifica_declaracao_duplicada($5.v[0]); declara($1.v[0], $5.v[0]); }
+  : ESPECIFICADOR_TIPO LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); $2.v.push_back($2.v[0]); } $2.v.insert($2.v.end(), $3.v.begin(), $3.v.end()); $2.v.push_back("="); $2.v.push_back("^"); $$.v = $2.v; verifica_declaracao_duplicada($1.v[0], $2.v[0]); declara($1.v[0], $2.v[0]); } 
+  | ESPECIFICADOR_TIPO LVALUE ',' LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); } $2.v.push_back($4.v[0]); if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); if ($5.v.size()>0) { $2.v.push_back($2.v[$2.v.size()-2]); $2.v.insert($2.v.end(), $5.v.begin(), $5.v.end()); $2.v.push_back("="); $2.v.push_back("^"); } } $$.v = $2.v; verifica_declaracao_duplicada($1.v[0], $2.v[0]); declara($1.v[0], $2.v[0]); verifica_declaracao_duplicada($1.v[0], $4.v[0]); declara($1.v[0], $4.v[0]); }
+  | ESPECIFICADOR_TIPO LVALUE ATRIBUICAO_DECLARACAO ',' LVALUE ATRIBUICAO_DECLARACAO { if (verifica_var_declaracao($1.v[0], $2.v[0])) { $2.v.push_back("&"); $2.v.push_back($2.v[0]); } $2.v.insert($2.v.end(), $3.v.begin(), $3.v.end()); $2.v.push_back("="); $2.v.push_back("^"); verifica_declaracao_duplicada($1.v[0], $2.v[0]); declara($1.v[0], $2.v[0]); $2.v.push_back($5.v[0]); if (verifica_var_declaracao($1.v[0], $5.v[0])) { $2.v.push_back("&"); $2.v.push_back($5.v[0]); } $2.v.insert($2.v.end(), $6.v.begin(), $6.v.end()); $2.v.push_back("="); $2.v.push_back("^"); $$.v = $2.v; verifica_declaracao_duplicada($1.v[0], $5.v[0]); declara($1.v[0], $5.v[0]); }
   ;
 
 ATRIBUICAO_DECLARACAO
@@ -135,12 +136,12 @@ ESPECIFICADOR_TIPO
   ;
 
 FUNCAO_CMD 
-  : tk_func LVALUE { declarando_parametros = true; } '(' PARAMETROS ')' ESCOPO_FUNC { verifica_declaracao_duplicada($2.v[0]); declara("func", $2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v);  declarando_parametros = false; }
+  : tk_func LVALUE { funcao_escopo_atual = $2.v[0]; declarando_parametros = true; } '(' PARAMETROS ')' ESCOPO_FUNC { verifica_declaracao_duplicada("func", $2.v[0]); declara("func", $2.v[0]); string start_func = gera_label($2.v[0]); $$.v = $2.v + "&" + $2.v + "{}" + "=" + "'&funcao'" + start_func + "[=]" + "^"; desempilha_elementos_func(start_func, $7.v); declarando_parametros = false; }
   ;
 
 PARAMETROS
-  : LVALUE { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara("param", $1.v[0]); } }
-  | LVALUE ',' PARAMETROS { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); verifica_declaracao_duplicada($1.v[0]); declara("param", $1.v[0]); } }
+  : LVALUE { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); declara("param", $1.v[0]); } }
+  | LVALUE ',' PARAMETROS { if (declarando_parametros) { parametros_a_serem_declarados.push_back($1.v[0]); declara("param", $1.v[0]); } }
   |
   ;
 
@@ -238,7 +239,7 @@ PROP
 
 LVALUEPROP
   : LVALUE PROP { $$.v = $1.v + "@" + $2.v; }
-  | '(' LVALUE PROP ')' LVALUEPROP { $$.v = $2.v + "@" + $4.v; }
+  | '(' LVALUE PROP ')' PROP { $$.v = $2.v + "@" + $3.v + "[@]" + $5.v; }
   ;
 
 OBJETO_LITERAL
@@ -327,7 +328,7 @@ void declara (string tipo, string nome) {
   variaveis_declaradas.push_back(nova);
 }
 
-void verifica_declaracao_duplicada (string nome) {
+void verifica_declaracao_duplicada (string tipo, string nome) {
   int cont = 0; // contador de ocorrencias
   for (int i=0; i<variaveis_declaradas.size(); i++) {
     if (variaveis_declaradas[i].nome == nome &&
@@ -351,7 +352,7 @@ void verifica_variavel_nao_declarada (string nome) {
     }
   }
   
-  if (cont == 0) {
+  if (cont == 0 && nome != funcao_escopo_atual && !dentro_escopo_func) {
     cout << "Erro: a variável '" << nome << "' não foi declarada." << endl;
         exit(1);
   }
