@@ -68,7 +68,7 @@ string funcao_escopo_atual;
 
 // Array
 vector<vector<string>> array_elementos;
-void desempilha_elementos_array (vector<string>);
+vector<string> desempilha_elementos_array ();
 
 %}
 
@@ -248,7 +248,7 @@ OBJETO_LITERAL
 
 OBJETO_CHAVE_VALOR
   : OBJETO_CHAVE ':' EXPRESSAO { $$.v = $1.v + $3.v + "[<=]"; }
-  | OBJETO_CHAVE_VALOR ',' OBJETO_CHAVE ':' EXPRESSAO { $$.v = $1.v + $3.v + "[<=]" + $5.v; }
+  | OBJETO_CHAVE_VALOR ',' OBJETO_CHAVE ':' EXPRESSAO { $$.v = $1.v + $3.v + $5.v + "[<=]"; }
   | OBJETO_CHAVE_VALOR ',' { $$.v = $1.v + "[<=]"; }
   ;
 
@@ -260,12 +260,12 @@ OBJETO_CHAVE
 
 ARRAY_LITERAL
   : '[' ']' { $$.v = vetor + "[]"; }
-  | '[' ARRAY_ELEMENTOS ']' { $$.v = vetor + "[]"; desempilha_elementos_array($$.v); }
+  | '[' ARRAY_ELEMENTOS ']' { vector<string> elem = desempilha_elementos_array(); $$.v = vetor + "[]" + elem; for (string v : elem) { cout << v << " "; } cout << endl; }
   ;
 
 ARRAY_ELEMENTOS
   : EXPRESSAO { array_elementos.push_back($1.v); }
-  | ARRAY_ELEMENTOS ',' EXPRESSAO { array_elementos.push_back($1.v); }
+  | EXPRESSAO ',' ARRAY_ELEMENTOS { cout << $1.v[0] << endl; array_elementos.push_back($1.v); }
   ;
 
 FUNCAO_LITERAL
@@ -370,11 +370,14 @@ void verifica_variavel_nao_declarada (string nome) {
   }
 }
 
-void desempilha_elementos_array (vector<string> v) {
-  for (int i=0; i<=array_elementos.size(); i++) { 
+vector<string> desempilha_elementos_array () {
+  vector<string> v;
+  int tam = array_elementos.size();
+  for (int i=0; i<tam; i++) {
     v = v + to_string(i) + array_elementos.back() + "[<=]"; 
     array_elementos.pop_back();
   }
+  return v;
 }
 
 void desempilha_elementos_func (string label, vector<string> bloco) {
