@@ -260,12 +260,12 @@ OBJETO_CHAVE
 
 ARRAY_LITERAL
   : '[' ']' { $$.v = vetor + "[]"; }
-  | '[' ARRAY_ELEMENTOS ']' { vector<string> elem = desempilha_elementos_array(); $$.v = vetor + "[]" + elem; for (string v : elem) { cout << v << " "; } cout << endl; }
+  | '[' ARRAY_ELEMENTOS ']' { vector<string> elem = desempilha_elementos_array(); $$.v = vetor + "[]" + elem; }
   ;
 
 ARRAY_ELEMENTOS
   : EXPRESSAO { array_elementos.push_back($1.v); }
-  | EXPRESSAO ',' ARRAY_ELEMENTOS { cout << $1.v[0] << endl; array_elementos.push_back($1.v); }
+  | EXPRESSAO ',' ARRAY_ELEMENTOS { array_elementos.push_back($1.v); }
   ;
 
 FUNCAO_LITERAL
