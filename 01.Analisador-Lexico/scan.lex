@@ -67,5 +67,3 @@ STRING2 {ASPAS_INVERTIDAS}
 .            { return *yytext; }
 
 %%
-
-/* Não coloque nada aqui - a função main é automaticamente incluída na hora de avaliar e dar a nota. */
